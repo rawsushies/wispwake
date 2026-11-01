@@ -3,15 +3,11 @@ import { WakeInteractable } from '../systems/WakeSystem';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveManager } from '../systems/SaveManager';
 import { VEILGROVE_HEX } from '../config/palette';
+import { CampaignChapterId } from '../config/gameConfig';
 
-/**
- * AncientBloom Landmark (Section 7.3 & Beat 7 "First Bloom"):
- * - Dormant state: Closed monumental lotus shrine atop the canopy summit.
- * - Activated result: Triggers the chapter restoration event—warm golden light washes over the canopy,
- *   musical chords swell, and the chapter completion state is saved.
- */
 export class AncientBloom implements WakeInteractable {
   public readonly id: string;
+  public readonly chapterId: CampaignChapterId | 'wake_trial';
   public readonly sprite: Phaser.GameObjects.Sprite;
   private readonly scene: Phaser.Scene;
   private readonly onRestoredCallback: () => void;
@@ -20,6 +16,7 @@ export class AncientBloom implements WakeInteractable {
 
   constructor(
     scene: Phaser.Scene,
+    chapterId: CampaignChapterId | 'wake_trial',
     id: string,
     x: number,
     y: number,
@@ -27,6 +24,7 @@ export class AncientBloom implements WakeInteractable {
     onRestoredCallback: () => void
   ) {
     this.scene = scene;
+    this.chapterId = chapterId;
     this.id = id;
     this.onRestoredCallback = onRestoredCallback;
 
@@ -94,14 +92,16 @@ export class AncientBloom implements WakeInteractable {
     this.isRestored = true;
     this.sprite.setTint(0xffffff);
     AudioManager.playGrandRestoration();
-    SaveManager.markChapterCompleted();
+
+    if (this.chapterId !== 'wake_trial') {
+      SaveManager.markChapterCompleted(this.chapterId);
+    }
 
     this.sprite.play('ancient_restoring', true);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'ancient_restoring', () => {
       this.sprite.play('ancient_radiant', true);
     });
 
-    // Radiant golden restoration wave
     const wave = this.scene.add.image(this.sprite.x, this.sprite.y - 68, 'vfx_wake_ring');
     wave.setDepth(25);
     wave.setScale(0.2);

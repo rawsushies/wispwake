@@ -1,23 +1,21 @@
 import Phaser from 'phaser';
 
 /**
- * CharacterArtManager — Milestone 3 Character Art Redesign & Cutout Rig Pipeline.
+ * CharacterArtManager — Milestone 4 Complete Pose-Based Character Atlas Pipeline (Section 02).
  *
- * Processes the canonical hand-painted Nima (`nima_side_gameplay_master`) and Pip (`pip_gameplay_master`)
- * illustrations derived directly from `ref_nima_pip_concept_1793515706089.jpg`:
- * 1. Performs edge-flood chroma-key alpha extraction to strip the uniform Night Ink (#121B2B) studio backdrop
- *    while preserving 100% of the internal hand-painted gouache brushwork, dark pupils, and warm seed shading.
- * 2. Assembles multi-frame skeletal cutout animation atlases (`nima_sheet` 96x112 x 41 frames, `pip_sheet` 64x64 x 24 frames)
- *    using articulated region transforms (head tilt, leaf-cloak billow, independent stride legs, glowing chest seed,
- *    and translucent Spirit Lilac / Wake Mint moth wing flapping).
- * 3. Guarantees Nima's feet sit flush at y = 100 inside each 96x112 frame so her 34x72 physics hitbox aligns with
- *    zero floating or sinking.
+ * Replaces the Milestone 3 horizontal leg-slicing workaround with a true multi-pose hand-painted
+ * keyframe pipeline using:
+ * 1. `nima_master_raw`: Canonical idle/standing side-profile illustration.
+ * 2. `nima_run_contact_raw`: Full-body hand-painted running contact stride pose (front leg extended forward,
+ *    back leg pushing off behind, leaf cloak billowing naturally, zero duplicated anatomy).
+ * 3. `nima_run_passing_raw`: Full-body hand-painted running passing stride pose (planted supporting leg,
+ *    opposite knee lifted and swinging forward).
+ * 4. `pip_master_raw`: Canonical approved Pip companion master.
+ *
+ * Every frame in `nima_sheet` (96x112 x 41 frames) is calibrated so Nima's lowest planted foot sits
+ * strictly at `y = 100` (matching her 34x72 physics body with offset Y = 28 -> bottom = 100).
  */
 export class CharacterArtManager {
-  /**
-   * Removes the uniform Night Ink (#121B2B) background from a square character master image
-   * using an 8-connected border flood-fill with soft anti-aliased edge feathering.
-   */
   public static extractTransparentMaster(
     sourceImg: HTMLImageElement,
     colorTolerance = 38,
@@ -35,7 +33,6 @@ export class CharacterArtManager {
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
 
-    // Sample corner pixels to determine exact background RGB
     const bgR = data[0];
     const bgG = data[1];
     const bgB = data[2];
@@ -78,7 +75,6 @@ export class CharacterArtManager {
         if (dist <= colorTolerance) {
           data[pIdx + 3] = 0;
         } else {
-          // Smooth anti-aliased alpha ramp on silhouette border
           const ratio = (dist - colorTolerance) / (featherTolerance - colorTolerance);
           data[pIdx + 3] = Math.round(ratio * 255);
         }
@@ -110,10 +106,6 @@ export class CharacterArtManager {
     return canvas;
   }
 
-  /**
-   * Computes the non-transparent bounding box of an extracted character canvas
-   * so feet and center axes can be calibrated with pixel precision.
-   */
   private static getOpaqueBounds(canvas: HTMLCanvasElement): {
     minX: number;
     maxX: number;
@@ -159,21 +151,39 @@ export class CharacterArtManager {
   }
 
   /**
-   * Builds the 41-frame `nima_sheet` (96x112 per frame) directly from the transparent
-   * hand-painted Nima side-profile master using a 4-part articulated cutout rig:
-   * - Part 1: Back Leaf Cloak & Hood tail (billows during run, jump, fall, and Wake cast)
-   * - Part 2: Lower Trousers & Wrapped Boots (independent stride swing for left/right legs)
-   * - Part 3: Upper Toric, Leaf Mantle, Satchel & Cradled Seed
-   * - Part 4: Expressive Head & Tousled Chestnut Hair (subtle pitch/bob)
-   * - Dynamic Overlay: Warm Sap Gold (#F1C878) & Wake Mint (#8FE7C7) illumination on the seed
+   * Builds the 41-frame `nima_sheet` (96x112 per frame) from the three full-body hand-painted
+   * pose masters (`nima_master_raw`, `nima_run_contact_raw`, `nima_run_passing_raw`).
+   * Zero leg region duplication is ever performed—every frame renders a complete, anatomically
+   * coherent full-body illustration with natural weight transfer, foot contact, and seed glow.
    */
   public static buildNimaAtlasFromMaster(scene: Phaser.Scene): boolean {
     if (!scene.textures.exists('nima_master_raw')) return false;
-    const rawSource = scene.textures.get('nima_master_raw').getSourceImage() as HTMLImageElement;
-    if (!rawSource || !rawSource.width) return false;
+    const rawIdle = scene.textures.get('nima_master_raw').getSourceImage() as HTMLImageElement;
+    if (!rawIdle || !rawIdle.width) return false;
 
-    const cleanMaster = this.extractTransparentMaster(rawSource, 38, 56);
-    const bounds = this.getOpaqueBounds(cleanMaster);
+    const cleanIdle = this.extractTransparentMaster(rawIdle, 38, 56);
+    const boundsIdle = this.getOpaqueBounds(cleanIdle);
+
+    // Extract dedicated running contact & passing full-body poses (fallback to idle if still loading)
+    let cleanContact = cleanIdle;
+    let boundsContact = boundsIdle;
+    if (scene.textures.exists('nima_run_contact_raw')) {
+      const rawContact = scene.textures.get('nima_run_contact_raw').getSourceImage() as HTMLImageElement;
+      if (rawContact && rawContact.width) {
+        cleanContact = this.extractTransparentMaster(rawContact, 38, 56);
+        boundsContact = this.getOpaqueBounds(cleanContact);
+      }
+    }
+
+    let cleanPassing = cleanIdle;
+    let boundsPassing = boundsIdle;
+    if (scene.textures.exists('nima_run_passing_raw')) {
+      const rawPassing = scene.textures.get('nima_run_passing_raw').getSourceImage() as HTMLImageElement;
+      if (rawPassing && rawPassing.width) {
+        cleanPassing = this.extractTransparentMaster(rawPassing, 38, 56);
+        boundsPassing = this.getOpaqueBounds(cleanPassing);
+      }
+    }
 
     if (scene.textures.exists('nima_sheet')) {
       scene.textures.remove('nima_sheet');
@@ -187,242 +197,177 @@ export class CharacterArtManager {
     if (!canvasTex) return false;
     const ctx = canvasTex.getContext();
 
-    // Target visible height in 96x112 frame: 88px (head top at y=12, feet at y=100)
-    const targetHeight = 88;
-    const scale = targetHeight / bounds.height;
-    const destW = bounds.width * scale;
-    const destH = targetHeight;
-
-    // Anatomical split ratios within Nima's bounding box:
-    // 0.00 .. 0.38: Head & tousled hair
-    // 0.34 .. 0.72: Leaf cloak, tunic, satchel & glowing seed
-    // 0.68 .. 1.00: Patched trousers & wrapped ankle boots
-    const headSplitY = 0.37;
-    const hipSplitY = 0.68;
-
     for (let frameIdx = 0; frameIdx < 41; frameIdx++) {
       const col = frameIdx % cols;
       const row = Math.floor(frameIdx / cols);
       const ox = col * fw;
       const oy = row * fh;
 
+      let activeCanvas = cleanIdle;
+      let activeBounds = boundsIdle;
+      let targetHeight = 86;
       let bobY = 0;
-      let bodyLean = 0;
-      let headNod = 0;
-      let cloakFlutter = 0;
-      let strideX = 0;
-      let strideLift = 0;
+      let bodyPitch = 0;
       let seedGlowIntensity = 1.0;
-      let squashX = 1.0;
-      let stretchY = 1.0;
       let alpha = 1.0;
+      let centerOffsetX = 0;
 
       if (frameIdx < 8) {
-        // Idle (0..7): Gentle breathing, warm seed pulse, soft cloak sway
+        // IDLE (Frames 0..7): Gentle breathing & warm seed pulse on standing master
         const t = (frameIdx / 8) * Math.PI * 2;
-        bobY = Math.sin(t) * 1.6;
-        headNod = Math.sin(t - 0.5) * 0.025;
-        cloakFlutter = Math.sin(t) * 2.2;
-        seedGlowIntensity = 0.9 + Math.sin(t) * 0.18;
+        activeCanvas = cleanIdle;
+        activeBounds = boundsIdle;
+        targetHeight = 86 + Math.sin(t) * 1.2;
+        bobY = 0;
+        seedGlowIntensity = 0.92 + Math.sin(t) * 0.16;
       } else if (frameIdx < 18) {
-        // Run (8..17): Dynamic stride, forward lean, billowing leaf cloak
-        const step = frameIdx - 8;
-        const t = (step / 10) * Math.PI * 2;
-        bobY = -Math.abs(Math.sin(t)) * 4.5 + 1.0;
-        bodyLean = 0.09;
-        headNod = Math.sin(t * 2) * 0.03;
-        cloakFlutter = 7 + Math.sin(t * 2) * 3.5;
-        strideX = Math.sin(t) * 7.5;
-        strideLift = Math.max(0, -Math.cos(t) * 4.5);
-        seedGlowIntensity = 1.05;
+        // RUN CYCLE (Frames 8..17 — 10-frame natural running cycle alternating Contact -> Recoil -> Passing -> High-Point -> Contact)
+        // Each half-stride (5 frames) transitions smoothly across the full-body Contact and Passing illustrations
+        const step = frameIdx - 8; // 0..9
+        const halfStep = step % 5; // 0..4
+        const isSecondStride = step >= 5;
+
+        if (halfStep === 0) {
+          // Frame 0 / 5: Full Contact Stride (Front foot strikes ground, back leg pushes off)
+          activeCanvas = cleanContact;
+          activeBounds = boundsContact;
+          targetHeight = 82;
+          bobY = 0;
+          bodyPitch = 0.02;
+          centerOffsetX = -3;
+        } else if (halfStep === 1) {
+          // Frame 1 / 6: Down / Recoil Absorption (Weight settles onto planted leg)
+          activeCanvas = cleanPassing;
+          activeBounds = boundsPassing;
+          targetHeight = 81;
+          bobY = 1.0;
+          bodyPitch = 0.04;
+          centerOffsetX = -1;
+        } else if (halfStep === 2) {
+          // Frame 2 / 7: Mid-Stride Passing Pose (Supporting leg vertical, opposite knee driving up)
+          activeCanvas = cleanPassing;
+          activeBounds = boundsPassing;
+          targetHeight = 84;
+          bobY = -1.5;
+          bodyPitch = 0.01;
+          centerOffsetX = 0;
+        } else if (halfStep === 3) {
+          // Frame 3 / 8: Push-Off / Airborne Drive (Driving forward into full extension)
+          activeCanvas = cleanContact;
+          activeBounds = boundsContact;
+          targetHeight = 84;
+          bobY = -3.0;
+          bodyPitch = -0.02;
+          centerOffsetX = -2;
+        } else {
+          // Frame 4 / 9: Pre-Contact Reach
+          activeCanvas = cleanPassing;
+          activeBounds = boundsPassing;
+          targetHeight = 83;
+          bobY = -1.0;
+          bodyPitch = 0.02;
+          centerOffsetX = -1;
+        }
+
+        if (isSecondStride) {
+          // Subtle natural rhythm variation between left and right stride
+          bobY += 0.5;
+        }
+        seedGlowIntensity = 1.08;
       } else if (frameIdx < 21) {
-        // Jump Start anticipation (18..20)
+        // JUMP START ANTICIPATION (Frames 18..20)
         const p = (frameIdx - 18) / 2;
-        bobY = 3.5 * (1 - p);
-        squashX = 1.06 - p * 0.06;
-        stretchY = 0.94 + p * 0.06;
-        headNod = -0.05;
-        cloakFlutter = 4;
+        activeCanvas = cleanPassing;
+        activeBounds = boundsPassing;
+        targetHeight = 82 + p * 3;
+        bobY = 1.5 * (1 - p);
+        bodyPitch = -0.03;
       } else if (frameIdx < 24) {
-        // Rising (21..23)
-        const p = frameIdx - 21;
+        // RISING (Frames 21..23): Dynamic upward drive
+        activeCanvas = cleanContact;
+        activeBounds = boundsContact;
+        targetHeight = 84;
         bobY = -3;
-        stretchY = 1.04;
-        squashX = 0.97;
-        bodyLean = 0.05;
-        headNod = -0.06;
-        cloakFlutter = 6 + p * 1.5;
-        strideX = 3.5;
-        strideLift = 3.5;
+        bodyPitch = -0.05;
+        centerOffsetX = -3;
+        seedGlowIntensity = 1.15;
       } else if (frameIdx < 27) {
-        // Falling (24..26)
-        const p = frameIdx - 24;
-        bobY = -1.5;
-        bodyLean = -0.04;
-        headNod = 0.05;
-        cloakFlutter = 10 + p * 2;
-        strideX = -2.5;
-        strideLift = 2.5;
+        // FALLING (Frames 24..26): Descending pose with trailing leaf cloak
+        activeCanvas = cleanPassing;
+        activeBounds = boundsPassing;
+        targetHeight = 84;
+        bobY = -1;
+        bodyPitch = 0.04;
       } else if (frameIdx < 31) {
-        // Landing (27..30)
+        // LANDING (Frames 27..30): Soft knee absorption back to standing
         const p = (frameIdx - 27) / 3;
-        const crouch = Math.sin((1 - p) * Math.PI);
-        bobY = crouch * 4.0;
-        squashX = 1 + crouch * 0.07;
-        stretchY = 1 - crouch * 0.06;
-        cloakFlutter = (1 - p) * 7;
+        activeCanvas = p < 0.5 ? cleanPassing : cleanIdle;
+        activeBounds = p < 0.5 ? boundsPassing : boundsIdle;
+        targetHeight = 83 + p * 3;
+        bobY = (1 - p) * 2.0;
       } else if (frameIdx < 37) {
-        // Wake Cast (31..36): Raising the seed with radiant Sap Gold & Wake Mint aura
+        // WAKE CAST (Frames 31..36): Raising the glowing seed with radiant golden-mint bloom
         const p = (frameIdx - 31) / 5;
         const wave = Math.sin(p * Math.PI);
-        bobY = -wave * 3.0;
-        headNod = -wave * 0.06;
-        cloakFlutter = wave * 9.0;
-        seedGlowIntensity = 1.2 + wave * 1.35;
+        activeCanvas = wave > 0.45 ? cleanPassing : cleanIdle;
+        activeBounds = wave > 0.45 ? boundsPassing : boundsIdle;
+        targetHeight = 86;
+        bobY = -wave * 2.5;
+        seedGlowIntensity = 1.25 + wave * 1.45;
       } else {
-        // Respawn (37..40)
+        // RESPAWN (Frames 37..40): Materializing gently on the checkpoint platform
         const p = (frameIdx - 37) / 3;
-        bobY = (1 - p) * -8;
-        seedGlowIntensity = 2.0 - p * 1.0;
-        alpha = 0.4 + p * 0.6;
+        activeCanvas = cleanIdle;
+        activeBounds = boundsIdle;
+        targetHeight = 86;
+        bobY = (1 - p) * -6;
+        seedGlowIntensity = 1.9 - p * 0.9;
+        alpha = 0.45 + p * 0.55;
       }
+
+      const scale = targetHeight / activeBounds.height;
+      const destW = Math.min(fw - 6, activeBounds.width * scale);
+      const destH = activeBounds.height * (destW / activeBounds.width);
+
+      // Ground contact anchor at (ox + 48, oy + 100) so Nima's feet sit flush on platform tops
+      const footAnchorX = ox + fw * 0.5 + centerOffsetX;
+      const footAnchorY = oy + 100;
 
       ctx.save();
       ctx.globalAlpha = alpha;
 
-      // Ground contact point at (ox + 48, oy + 100) so feet always align with hitbox bottom (y = 100)
-      const footAnchorX = ox + fw * 0.5;
-      const footAnchorY = oy + 100;
-
-      // 1. Soft ground contact shadow
-      const shadowGrad = ctx.createRadialGradient(footAnchorX, footAnchorY, 2, footAnchorX, footAnchorY, 20);
-      shadowGrad.addColorStop(0, 'rgba(18, 27, 43, 0.55)');
+      // 1. Soft ground contact shadow at y = 100
+      const shadowGrad = ctx.createRadialGradient(ox + fw * 0.5, footAnchorY, 2, ox + fw * 0.5, footAnchorY, 19);
+      shadowGrad.addColorStop(0, 'rgba(18, 27, 43, 0.58)');
       shadowGrad.addColorStop(1, 'rgba(18, 27, 43, 0)');
       ctx.fillStyle = shadowGrad;
       ctx.beginPath();
-      ctx.ellipse(footAnchorX, footAnchorY, 17, 4.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(ox + fw * 0.5, footAnchorY, 17, 4.5, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // 2. Render Complete Hand-Painted Pose (Zero anatomical slicing or duplicated legs)
       ctx.translate(footAnchorX, footAnchorY + bobY);
-      ctx.scale(squashX, stretchY);
-      ctx.rotate(bodyLean);
-
-      const drawLeft = -destW * 0.5;
-      const drawTop = -destH;
-
-      // 2. Trailing Cloak Back-Flutter Layer (drawn behind legs when running/jumping/casting)
-      if (Math.abs(cloakFlutter) > 1.0) {
-        ctx.save();
-        ctx.translate(-cloakFlutter * 0.55, -destH * 0.45);
-        ctx.rotate((cloakFlutter * 0.012));
-        ctx.globalAlpha = alpha * 0.88;
-        const cloakSrcY = bounds.minY + bounds.height * 0.36;
-        const cloakSrcH = bounds.height * 0.44;
-        ctx.drawImage(
-          cleanMaster,
-          bounds.minX,
-          cloakSrcY,
-          bounds.width * 0.55,
-          cloakSrcH,
-          drawLeft - cloakFlutter * 0.35,
-          -destH * 0.09,
-          destW * 0.55,
-          destH * 0.44
-        );
-        ctx.restore();
-      }
-
-      // 3. Articulated Legs & Wrapped Ankle Boots (Back Leg & Front Leg)
-      const legSrcY = bounds.minY + bounds.height * hipSplitY;
-      const legSrcH = bounds.height * (1 - hipSplitY);
-      const legDestY = drawTop + destH * hipSplitY;
-      const legDestH = destH * (1 - hipSplitY);
-
-      // Back Leg (slightly darkened for depth separation during stride)
-      if (Math.abs(strideX) > 0.8) {
-        ctx.save();
-        ctx.translate(-strideX * 0.75, -strideLift * 0.5);
-        ctx.rotate(-strideX * 0.025);
-        ctx.filter = 'brightness(0.82)';
-        ctx.drawImage(
-          cleanMaster,
-          bounds.minX,
-          legSrcY,
-          bounds.width,
-          legSrcH,
-          drawLeft,
-          legDestY,
-          destW,
-          legDestH
-        );
-        ctx.filter = 'none';
-        ctx.restore();
-      }
-
-      // Front / Main Leg
-      ctx.save();
-      ctx.translate(strideX * 0.65, -strideLift);
-      ctx.rotate(strideX * 0.022);
-      ctx.drawImage(
-        cleanMaster,
-        bounds.minX,
-        legSrcY,
-        bounds.width,
-        legSrcH,
-        drawLeft,
-        legDestY,
-        destW,
-        legDestH
-      );
-      ctx.restore();
-
-      // 4. Torso, Embroidered Leaf Cloak, Satchel & Cradled Seed
-      const torsoSrcY = bounds.minY + bounds.height * (headSplitY - 0.03);
-      const torsoSrcH = bounds.height * (hipSplitY - headSplitY + 0.07);
-      const torsoDestY = drawTop + destH * (headSplitY - 0.03);
-      const torsoDestH = destH * (hipSplitY - headSplitY + 0.07);
+      ctx.rotate(bodyPitch);
 
       ctx.drawImage(
-        cleanMaster,
-        bounds.minX,
-        torsoSrcY,
-        bounds.width,
-        torsoSrcH,
-        drawLeft,
-        torsoDestY,
+        activeCanvas,
+        activeBounds.minX,
+        activeBounds.minY,
+        activeBounds.width,
+        activeBounds.height,
+        -destW * 0.5,
+        -destH,
         destW,
-        torsoDestH
+        destH
       );
 
-      // 5. Expressive Head & Tousled Chestnut Hair with subtle nod
-      const headSrcY = bounds.minY;
-      const headSrcH = bounds.height * (headSplitY + 0.03);
-      const headDestY = drawTop;
-      const headDestH = destH * (headSplitY + 0.03);
-
-      ctx.save();
-      ctx.translate(0, drawTop + headDestH * 0.85);
-      ctx.rotate(headNod);
-      ctx.drawImage(
-        cleanMaster,
-        bounds.minX,
-        headSrcY,
-        bounds.width,
-        headSrcH,
-        drawLeft,
-        -headDestH * 0.85,
-        destW,
-        headDestH
-      );
-      ctx.restore();
-
-      // 6. Integrated Magical Illumination from Nima's Living Seed (Sap Gold #F1C878 + Wake Mint #8FE7C7)
-      const seedX = destW * 0.19;
-      const seedY = -destH * 0.54;
+      // 3. Integrated Magical Illumination from Nima's Living Seed
+      const seedX = destW * 0.22;
+      const seedY = -destH * 0.56;
       const haloRadius = 18 * seedGlowIntensity;
       const seedHalo = ctx.createRadialGradient(seedX, seedY, 1.5, seedX, seedY, haloRadius);
-      seedHalo.addColorStop(0, `rgba(255, 248, 220, ${Math.min(0.95, 0.55 * seedGlowIntensity)})`);
-      seedHalo.addColorStop(0.45, `rgba(241, 200, 120, ${Math.min(0.75, 0.32 * seedGlowIntensity)})`);
+      seedHalo.addColorStop(0, `rgba(255, 248, 220, ${Math.min(0.95, 0.52 * seedGlowIntensity)})`);
+      seedHalo.addColorStop(0.45, `rgba(241, 200, 120, ${Math.min(0.75, 0.30 * seedGlowIntensity)})`);
       seedHalo.addColorStop(0.8, `rgba(143, 231, 199, ${Math.min(0.45, 0.14 * seedGlowIntensity)})`);
       seedHalo.addColorStop(1, 'rgba(143, 231, 199, 0)');
 
@@ -442,9 +387,7 @@ export class CharacterArtManager {
   }
 
   /**
-   * Builds the 22-frame `pip_sheet` (56x56 per frame) directly from the transparent
-   * hand-painted Pip illustration (`pip_gameplay_master`) with articulated wing-flapping,
-   * soft Spirit Lilac (#B7A2E8) and Wake Mint (#8FE7C7) bioluminescence, and curiosity tilts.
+   * Builds the approved 22-frame `pip_sheet` (56x56 per frame) from `pip_master_raw`.
    */
   public static buildPipAtlasFromMaster(scene: Phaser.Scene): boolean {
     if (!scene.textures.exists('pip_master_raw')) return false;
@@ -493,7 +436,6 @@ export class CharacterArtManager {
         ctx.scale(1.12 + Math.sin(phase) * 0.08, 1.12 + Math.cos(phase) * 0.08);
       }
 
-      // 1. Translucent Spirit Lilac & Wake Mint bioluminescent halo
       const glowRadius = isWakeReact ? 26 : 21;
       const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, glowRadius);
       aura.addColorStop(0, isWakeReact ? 'rgba(143, 231, 199, 0.85)' : 'rgba(183, 162, 232, 0.55)');
@@ -504,7 +446,6 @@ export class CharacterArtManager {
       ctx.arc(0, 0, glowRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Articulated Left/Back Wing Region (0..58% X of Pip master) flapping vertically
       const wingSplitX = 0.58;
       const wingSrcW = bounds.width * wingSplitX;
       const wingDestW = destW * wingSplitX;
@@ -526,7 +467,6 @@ export class CharacterArtManager {
       );
       ctx.restore();
 
-      // 3. Fuzzy Moth Body, Expressive Eyes & Feathered Antennae (48%..100% X of Pip master)
       const bodyStartRatio = 0.46;
       const bodySrcX = bounds.minX + bounds.width * bodyStartRatio;
       const bodySrcW = bounds.width * (1 - bodyStartRatio);

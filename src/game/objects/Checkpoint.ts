@@ -3,15 +3,19 @@ import { WakeInteractable } from '../systems/WakeSystem';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveManager } from '../systems/SaveManager';
 import { VEILGROVE_HEX } from '../config/palette';
+import { CampaignChapterId } from '../config/gameConfig';
+import { Player } from '../entities/player/Player';
 
 /**
- * Checkpoint (Section 8.3 of the Visual Bible):
- * - Placed after the player has learned the basic Wake interaction and before the most demanding traversal sequence.
- * - Visually obvious Resonance Cairn activated through proximity OR a Wake pulse.
- * - Respawn restores moving and temporary objects to a fair, deterministic state.
+ * Checkpoint (Milestone 4 Safe Respawn Calibration — Section 04):
+ * - Computes `spawnY` using `Player.getSafeCenterYForPlatformTop(platformTopY)` so Nima's
+ *   physics hitbox (`34x72`, bottom at `sprite.y + 44`) always spawns 4px above the supporting
+ *   platform's walkable top surface and never intersects inside the platform.
+ * - Persists checkpoint state per campaign chapter in `SaveManager` (Schema v2).
  */
 export class Checkpoint implements WakeInteractable {
   public readonly id: string;
+  public readonly chapterId: CampaignChapterId | 'wake_trial';
   public readonly sprite: Phaser.GameObjects.Sprite;
   private readonly scene: Phaser.Scene;
   public readonly spawnX: number;
@@ -19,15 +23,23 @@ export class Checkpoint implements WakeInteractable {
 
   public isActivated = false;
 
-  constructor(scene: Phaser.Scene, id: string, x: number, y: number, initiallyActivated = false) {
+  constructor(
+    scene: Phaser.Scene,
+    chapterId: CampaignChapterId | 'wake_trial',
+    id: string,
+    x: number,
+    platformTopY: number,
+    initiallyActivated = false
+  ) {
     this.scene = scene;
+    this.chapterId = chapterId;
     this.id = id;
     this.spawnX = x;
-    this.spawnY = y - 16;
+    this.spawnY = Player.getSafeCenterYForPlatformTop(platformTopY, 4);
 
     this.registerAnimations(scene);
 
-    this.sprite = scene.add.sprite(x, y, 'checkpoint_cairn_sheet', 0);
+    this.sprite = scene.add.sprite(x, platformTopY, 'checkpoint_cairn_sheet', 0);
     this.sprite.setOrigin(0.5, 0.9);
     this.sprite.setDepth(14);
 
@@ -91,7 +103,7 @@ export class Checkpoint implements WakeInteractable {
   public checkProximityActivation(playerX: number, playerY: number): boolean {
     if (this.isActivated) return false;
     const dist = Phaser.Math.Distance.Between(playerX, playerY, this.sprite.x, this.sprite.y - 36);
-    if (dist <= 68) {
+    if (dist <= 72) {
       return this.activate();
     }
     return false;
@@ -102,14 +114,16 @@ export class Checkpoint implements WakeInteractable {
     this.isActivated = true;
     this.sprite.setTint(0xffffff);
     AudioManager.playCheckpoint();
-    SaveManager.recordCheckpoint(this.id, this.spawnX, this.spawnY);
+
+    if (this.chapterId !== 'wake_trial') {
+      SaveManager.recordCheckpoint(this.chapterId, this.id, this.spawnX, this.spawnY);
+    }
 
     this.sprite.play('checkpoint_activating', true);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'checkpoint_activating', () => {
       this.sprite.play('checkpoint_active', true);
     });
 
-    // Warm golden spore shower
     for (let i = 0; i < 8; i++) {
       const mote = this.scene.add.image(
         this.sprite.x + (Math.random() - 0.5) * 32,

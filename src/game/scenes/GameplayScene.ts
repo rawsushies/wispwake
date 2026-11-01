@@ -1,10 +1,21 @@
 import Phaser from 'phaser';
-import { GENERATED_ASSETS, LevelMode, TelemetrySnapshot } from '../config/gameConfig';
+import {
+  ActiveDialogueBubble,
+  CampaignChapterId,
+  GENERATED_ASSETS,
+  TelemetrySnapshot,
+  TrialDifficulty,
+} from '../config/gameConfig';
 import { activePhysicsTuning } from '../config/physicsTuning';
 import { VEILGROVE_HEX } from '../config/palette';
 import { AtlasBuilder } from '../systems/AtlasBuilder';
 import { TerrainVisualAssembler } from '../systems/TerrainVisualAssembler';
 import { LivingEnvironmentSystem } from '../systems/LivingEnvironmentSystem';
+import { DynamicLightSource, LightingSystem } from '../systems/LightingSystem';
+import { DialogueManager } from '../systems/DialogueManager';
+import { CAMPAIGN_CHAPTERS, getCampaignChapter } from '../systems/LevelRegistry';
+import { WakeTrialsGenerator } from '../systems/WakeTrialsGenerator';
+import { InputManager } from '../systems/InputManager';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
 import { Player } from '../entities/player/Player';
@@ -16,25 +27,30 @@ import { BloomPlatform } from '../objects/BloomPlatform';
 import { RootBridge } from '../objects/RootBridge';
 import { Checkpoint } from '../objects/Checkpoint';
 import { AncientBloom } from '../objects/AncientBloom';
-import {
-  LevelDefinition,
-  PROTOTYPE_SANDBOX_LEVEL,
-  SLEEPING_CANOPY_LEVEL,
-} from '../levels/sleepingCanopy/levelData';
+import { BiomeTheme, LevelDefinition } from '../levels/sleepingCanopy/levelData';
 
 export interface GameplaySceneCallbacks {
   onTelemetry: (snapshot: TelemetrySnapshot) => void;
-  onChapterRestored: () => void;
+  onChapterRestored: (
+    chapterId: CampaignChapterId | 'wake_trial',
+    nextChapterId: CampaignChapterId | null,
+    trialTimeSec: number | null
+  ) => void;
   onTogglePause: () => void;
   onToggleDebug: () => void;
 }
 
 export class GameplayScene extends Phaser.Scene {
   private callbacks?: GameplaySceneCallbacks;
-  private levelMode: LevelMode = 'sleeping_canopy';
-  private levelDef: LevelDefinition = SLEEPING_CANOPY_LEVEL;
+  private activeMode: CampaignChapterId | 'wake_trial' = 'sleeping_canopy';
+  private levelDef!: LevelDefinition;
   private isTitleAttractMode = true;
   private attractElapsed = 0;
+
+  // Wake Trials State
+  private trialDifficulty: TrialDifficulty = 'medium';
+  private trialSeed = 'ME-48219';
+  private trialElapsedSec = 0;
 
   // Core Entities & Systems
   private player!: Player;
@@ -42,6 +58,9 @@ export class GameplayScene extends Phaser.Scene {
   private wakeSystem!: WakeSystem;
   private cameraController!: CameraController;
   private environmentSystem!: LivingEnvironmentSystem;
+  private lightingSystem!: LightingSystem;
+  private dialogueManager!: DialogueManager;
+  private latestDialogueBubble: ActiveDialogueBubble | null = null;
 
   // World Groups & Objects
   private staticPlatforms!: Phaser.Physics.Arcade.StaticGroup;
@@ -53,7 +72,6 @@ export class GameplayScene extends Phaser.Scene {
   private checkpoint!: Checkpoint;
   private ancientBloom!: AncientBloom;
 
-  // Debug Visualization Graphics
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private isChapterRestored = false;
 
@@ -66,25 +84,37 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   public preload(): void {
-    // Load hand-painted environment layers & canonical character masters
     this.load.image('bg_canopy_far_sky', GENERATED_ASSETS.bgCanopyFarSky);
+    this.load.image('bg_moonlit_marsh', GENERATED_ASSETS.bgMoonlitMarsh);
+    this.load.image('bg_hollow_below', GENERATED_ASSETS.bgHollowBelow);
+    this.load.image('bg_windward_ruins', GENERATED_ASSETS.bgWindwardRuins);
     this.load.image('env_distant_canopy', GENERATED_ASSETS.envDistantCanopy);
     this.load.image('bg_canopy_giant_roots', GENERATED_ASSETS.bgCanopyGiantRoots);
     this.load.image('env_near_twisted_roots_raw', GENERATED_ASSETS.envNearTwistedRoots);
     this.load.image('nima_master_raw', GENERATED_ASSETS.nimaSideMaster);
+    this.load.image('nima_run_contact_raw', GENERATED_ASSETS.nimaRunContact);
+    this.load.image('nima_run_passing_raw', GENERATED_ASSETS.nimaRunPassing);
     this.load.image('pip_master_raw', GENERATED_ASSETS.pipMaster);
   }
 
   public create(): void {
-    // Build all multi-part painted character atlases, creatures, interactive plants, and organic hazards
     AtlasBuilder.buildAllAtlases(this);
 
     const saved = SaveManager.get();
-    this.levelMode = saved.levelMode || 'sleeping_canopy';
-    this.levelDef = this.levelMode === 'prototype_sandbox' ? PROTOTYPE_SANDBOX_LEVEL : SLEEPING_CANOPY_LEVEL;
-
+    this.activeMode = saved.currentChapterId || 'sleeping_canopy';
+    this.resolveLevelDefinition();
     this.buildLevelWorld();
     this.setupGlobalShortcuts();
+  }
+
+  private resolveLevelDefinition(): void {
+    if (this.activeMode === 'wake_trial') {
+      const built = WakeTrialsGenerator.buildValidatedTrial(this.trialDifficulty, this.trialSeed);
+      this.trialSeed = built.seed;
+      this.levelDef = built.levelDef;
+    } else {
+      this.levelDef = getCampaignChapter(this.activeMode);
+    }
   }
 
   private setupGlobalShortcuts(): void {
@@ -105,10 +135,21 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.game.events.on(Phaser.Core.Events.BLUR, () => {
+      InputManager.clearAll();
       if (this.player) {
         this.player.clearInputs();
       }
     });
+  }
+
+  private getCurrentBiome(): BiomeTheme {
+    if (this.activeMode === 'wake_trial') {
+      if (this.trialDifficulty === 'medium') return 'marsh';
+      if (this.trialDifficulty === 'hard') return 'cavern';
+      if (this.trialDifficulty === 'extreme') return 'ruins';
+      return 'canopy';
+    }
+    return this.levelDef.biomeTheme || 'canopy';
   }
 
   private buildLevelWorld(): void {
@@ -118,40 +159,44 @@ export class GameplayScene extends Phaser.Scene {
     this.blooms = [];
     this.rootBridges = [];
     this.drifters = [];
+    this.trialElapsedSec = 0;
+    this.latestDialogueBubble = null;
 
     const w = this.levelDef.width;
     const h = this.levelDef.height;
-    this.physics.world.setBounds(0, 0, w, h + 200);
+    const biome = this.getCurrentBiome();
+    this.physics.world.setBounds(0, 0, w, h + 220);
 
-    const saved = SaveManager.get();
-    this.isChapterRestored = saved.chapterCompleted && this.levelMode === 'sleeping_canopy';
+    const chapterSave =
+      this.activeMode !== 'wake_trial' ? SaveManager.getChapterProgress(this.activeMode) : null;
+    this.isChapterRestored = Boolean(chapterSave?.completed);
 
-    // 1. 6-LAYER LIVING ENVIRONMENT SYSTEM (Far Sky, Distant Trees + Birds, Midground Forest, Near Roots + Vines + Wisps, Foreground, Atmosphere)
+    // 1. 6-LAYER LIVING ENVIRONMENT SYSTEM (Multi-Biome + Upper Canopy & Midground Bands)
     this.environmentSystem = new LivingEnvironmentSystem(
       this,
       w,
       h,
       this.levelDef.platforms,
-      this.isChapterRestored
+      this.isChapterRestored,
+      biome
     );
 
-    // 2. GAMEPLAY PLANE: Authored Static Collision Bodies + Separate Organic Terrain Visuals (Section 09 & Section 13.3)
+    // 2. GAMEPLAY PLANE: Authored Static Collision Bodies + Separate Multi-Biome Organic Terrain Visuals
     this.staticPlatforms = this.physics.add.staticGroup();
     this.levelDef.platforms.forEach((platSpec, idx) => {
       const centerX = platSpec.x + platSpec.width * 0.5;
       const centerY = platSpec.y + platSpec.height * 0.5;
 
-      // Invisible physics body matching exact authored platform bounds
       const zone = this.add.rectangle(centerX, centerY, platSpec.width, platSpec.height, 0x000000, 0);
       this.physics.add.existing(zone, true);
       this.staticPlatforms.add(zone);
 
-      // Rich organic root/stone formation visual with overhanging moss, shelf fungi, and hanging roots
       const visual = TerrainVisualAssembler.createOrganicPlatformVisual(
         this,
         platSpec,
         idx,
-        this.isChapterRestored
+        this.isChapterRestored,
+        biome
       );
       this.platformVisuals.push(visual);
     });
@@ -177,8 +222,15 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     for (const rSpec of this.levelDef.rootBridges) {
-      const alreadyExtended = saved.activatedRootBridgeIds.includes(rSpec.id);
-      const bridge = new RootBridge(this, rSpec.id, rSpec.x, rSpec.y, alreadyExtended);
+      const alreadyExtended = Boolean(chapterSave?.activatedRootBridgeIds.includes(rSpec.id));
+      const bridge = new RootBridge(
+        this,
+        this.activeMode,
+        rSpec.id,
+        rSpec.x,
+        rSpec.y,
+        alreadyExtended
+      );
       this.rootBridges.push(bridge);
       this.wakeSystem.register(bridge);
     }
@@ -198,13 +250,21 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     const cpSpec = this.levelDef.checkpoint;
-    const isCpActive = saved.activeCheckpointId === cpSpec.id;
-    this.checkpoint = new Checkpoint(this, cpSpec.id, cpSpec.x, cpSpec.y, isCpActive);
+    const isCpActive = Boolean(chapterSave && chapterSave.activeCheckpointId === cpSpec.id);
+    this.checkpoint = new Checkpoint(
+      this,
+      this.activeMode,
+      cpSpec.id,
+      cpSpec.x,
+      cpSpec.y,
+      isCpActive
+    );
     this.wakeSystem.register(this.checkpoint);
 
     const abSpec = this.levelDef.ancientBloom;
     this.ancientBloom = new AncientBloom(
       this,
+      this.activeMode,
       abSpec.id,
       abSpec.x,
       abSpec.y,
@@ -213,18 +273,24 @@ export class GameplayScene extends Phaser.Scene {
     );
     this.wakeSystem.register(this.ancientBloom);
 
-    // 5. Player (Nima) & Companion (Pip) Spawn
+    // 5. Safe Player (Nima) & Companion (Pip) Spawn (Priority 3: Safe Platform Top Calculation)
+    const firstPlatTop = this.levelDef.platforms[0]?.y ?? this.levelDef.spawnY + 44;
     let spawnX = this.levelDef.spawnX;
-    let spawnY = this.levelDef.spawnY;
-    if (isCpActive && saved.checkpointX !== null && saved.checkpointY !== null) {
-      spawnX = saved.checkpointX;
-      spawnY = saved.checkpointY;
+    let spawnY = Player.getSafeCenterYForPlatformTop(firstPlatTop, 4);
+
+    if (isCpActive) {
+      spawnX = this.checkpoint.spawnX;
+      spawnY = this.checkpoint.spawnY; // Calibrated via Player.getSafeCenterYForPlatformTop
     }
 
     this.player = new Player(this, spawnX, spawnY);
     this.pip = new Pip(this, spawnX - 32, spawnY - 44);
 
-    // 6. Physics Colliders
+    // 6. Hybrid 2D/2.5D Dynamic Lighting System & Pip Companion Dialogue Manager
+    this.lightingSystem = new LightingSystem(this, biome, this.levelDef.platforms, this.isChapterRestored);
+    this.dialogueManager = new DialogueManager(this, this.activeMode);
+
+    // 7. Physics Colliders
     this.physics.add.collider(this.player.sprite, this.staticPlatforms);
 
     for (const bloom of this.blooms) {
@@ -242,13 +308,15 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.physics.add.overlap(this.player.sprite, this.hazardGroup, () => {
-      this.triggerHazardRespawn();
+      if (!this.player.isRespawnProtected()) {
+        this.triggerHazardRespawn();
+      }
     });
 
-    // 7. Close-Follow Camera Controller (42% from left, 58% from top)
+    // 8. Close-Follow Camera Controller (42% from left, 58% from top)
     this.cameraController = new CameraController(this, w, h, spawnX, spawnY);
 
-    // 8. Debug Hitbox & Radius Overlay Graphics
+    // 9. Debug Hitbox & Radius Overlay Graphics
     this.debugGraphics = this.add.graphics();
     this.debugGraphics.setDepth(50);
   }
@@ -283,11 +351,15 @@ export class GameplayScene extends Phaser.Scene {
       this.player.triggerWakeAnimation();
       this.pip.triggerWakeReaction();
       this.environmentSystem.onWakePulse(px, py, activePhysicsTuning.wakeRadius);
+      this.lightingSystem.spawnWakeLightPulse(px, py, activePhysicsTuning.wakeRadius);
+      this.dialogueManager.notifyWakeUsed();
       this.cameraController.triggerSubtleShake(110, 0.0018);
     }
   }
 
   private triggerHazardRespawn(): void {
+    if (this.player.isRespawnProtected()) return;
+
     AudioManager.playHazardRespawn();
     this.cameraController.triggerSubtleShake(160, 0.003);
 
@@ -298,11 +370,12 @@ export class GameplayScene extends Phaser.Scene {
       drifter.resetDeterministic();
     }
 
-    const saved = SaveManager.get();
-    const respawnX =
-      this.checkpoint.isActivated && saved.checkpointX !== null ? saved.checkpointX : this.levelDef.spawnX;
-    const respawnY =
-      this.checkpoint.isActivated && saved.checkpointY !== null ? saved.checkpointY : this.levelDef.spawnY;
+    // Priority 3: Safe Platform-Top Respawn Coordinates
+    const firstPlatTop = this.levelDef.platforms[0]?.y ?? this.levelDef.spawnY + 44;
+    const defaultSafeY = Player.getSafeCenterYForPlatformTop(firstPlatTop, 4);
+
+    const respawnX = this.checkpoint.isActivated ? this.checkpoint.spawnX : this.levelDef.spawnX;
+    const respawnY = this.checkpoint.isActivated ? this.checkpoint.spawnY : defaultSafeY;
 
     this.player.respawnAt(respawnX, respawnY);
     this.pip.snapToPlayer(this.player);
@@ -313,15 +386,16 @@ export class GameplayScene extends Phaser.Scene {
     this.isChapterRestored = true;
     this.cameraController.triggerSubtleShake(320, 0.0025);
 
-    // Coordinate environmental restoration across all 6 layers, flora, and wisps
     this.environmentSystem.triggerGrandRestoration();
+    this.lightingSystem.setRestored(true);
     this.pip.triggerWakeReaction();
+    this.dialogueManager.triggerEvent('chapter_restored');
 
-    // Refresh organic platform visuals with warm restored moss highlights
+    const biome = this.getCurrentBiome();
     this.platformVisuals.forEach((v) => v.destroy());
     this.platformVisuals = [];
     this.levelDef.platforms.forEach((platSpec, idx) => {
-      const visual = TerrainVisualAssembler.createOrganicPlatformVisual(this, platSpec, idx, true);
+      const visual = TerrainVisualAssembler.createOrganicPlatformVisual(this, platSpec, idx, true, biome);
       this.platformVisuals.push(visual);
     });
 
@@ -329,9 +403,72 @@ export class GameplayScene extends Phaser.Scene {
       bloom.onWakeActivated();
     }
 
+    let nextChapId: CampaignChapterId | null = null;
+    let finishedTrialSec: number | null = null;
+
+    if (this.activeMode === 'wake_trial') {
+      finishedTrialSec = Number(this.trialElapsedSec.toFixed(2));
+      SaveManager.recordTrialCompletion(this.trialDifficulty, finishedTrialSec, this.trialSeed);
+    } else {
+      const idx = CAMPAIGN_CHAPTERS.findIndex((c) => c.chapterId === this.activeMode);
+      if (idx >= 0 && idx < CAMPAIGN_CHAPTERS.length - 1) {
+        nextChapId = CAMPAIGN_CHAPTERS[idx + 1].chapterId;
+      }
+    }
+
+    const completedMode = this.activeMode;
     this.time.delayedCall(1500, () => {
-      this.callbacks?.onChapterRestored();
+      this.callbacks?.onChapterRestored(completedMode, nextChapId, finishedTrialSec);
     });
+  }
+
+  private collectWorldLights(): DynamicLightSource[] {
+    const lights: DynamicLightSource[] = [];
+
+    for (const bloom of this.blooms) {
+      const isOpen = bloom.state === 'active' || bloom.state === 'awakening';
+      lights.push({
+        x: bloom.sprite.x,
+        y: bloom.sprite.y - 6,
+        radius: isOpen ? 165 : 75,
+        colorHex: isOpen ? '143, 231, 199' : '183, 162, 232',
+        intensity: isOpen ? 0.78 : 0.32,
+      });
+    }
+
+    for (const bridge of this.rootBridges) {
+      if (bridge.state !== 'recessed') {
+        lights.push({
+          x: bridge.sprite.x + 110,
+          y: bridge.sprite.y,
+          radius: 155,
+          colorHex: '241, 200, 120',
+          intensity: 0.58,
+        });
+      }
+    }
+
+    if (this.checkpoint) {
+      lights.push({
+        x: this.checkpoint.sprite.x,
+        y: this.checkpoint.sprite.y - 24,
+        radius: this.checkpoint.isActivated ? 195 : 95,
+        colorHex: this.checkpoint.isActivated ? '241, 200, 120' : '143, 231, 199',
+        intensity: this.checkpoint.isActivated ? 0.85 : 0.38,
+      });
+    }
+
+    if (this.ancientBloom) {
+      lights.push({
+        x: this.ancientBloom.sprite.x,
+        y: this.ancientBloom.sprite.y - 28,
+        radius: this.ancientBloom.isRestored ? 280 : 145,
+        colorHex: this.ancientBloom.isRestored ? '241, 200, 120' : '183, 162, 232',
+        intensity: this.ancientBloom.isRestored ? 0.95 : 0.52,
+      });
+    }
+
+    return lights;
   }
 
   public update(_time: number, rawDeltaMs: number): void {
@@ -350,7 +487,12 @@ export class GameplayScene extends Phaser.Scene {
       const panY = this.player.sprite.y - 22 + Math.cos(this.attractElapsed * 0.35) * 14;
       this.cameraController.snapTo(panX, panY);
       this.pip.update(dt, this.player);
+      this.latestDialogueBubble = null;
     } else {
+      if (this.activeMode === 'wake_trial' && !this.isChapterRestored) {
+        this.trialElapsedSec += dt;
+      }
+
       this.player.update(
         dt,
         () => this.handleWakeAction(),
@@ -361,22 +503,44 @@ export class GameplayScene extends Phaser.Scene {
         this.triggerHazardRespawn();
       }
 
+      const wasCpActive = this.checkpoint.isActivated;
       this.checkpoint.checkProximityActivation(this.player.sprite.x, this.player.sprite.y);
+      if (!wasCpActive && this.checkpoint.isActivated) {
+        this.dialogueManager.triggerEvent('checkpoint_reached');
+      }
 
       const nearestHint = this.wakeSystem.update(dt, this.player.sprite.x, this.player.sprite.y);
       this.pip.setCuriosityHint(nearestHint);
       this.pip.update(dt, this.player);
 
+      this.latestDialogueBubble = this.dialogueManager.update(
+        dt,
+        this.player.sprite.x,
+        this.pip.sprite.x,
+        this.pip.sprite.y,
+        nearestHint !== null
+      );
+
       this.cameraController.update(dt, this.player);
     }
 
-    // Update all 6 living environment layers, birds, wisps, swaying vines, and reactive ferns
     this.environmentSystem.update(
       dt,
       this.cameras.main.scrollX,
       this.player.sprite.x,
       this.player.body.bottom,
       this.player.body.velocity.x
+    );
+
+    this.lightingSystem.update(
+      dt,
+      this.cameras.main.scrollX,
+      this.cameras.main.scrollY,
+      this.player.sprite.x,
+      this.player.sprite.y,
+      this.pip.sprite.x,
+      this.pip.sprite.y,
+      this.collectWorldLights()
     );
 
     this.renderDebugOverlay();
@@ -466,12 +630,18 @@ export class GameplayScene extends Phaser.Scene {
       jumpBufferRemaining: Number(this.player.jumpBufferTimer.toFixed(2)),
       wakeCooldownRemaining: Number(this.wakeSystem.cooldownRemaining.toFixed(2)),
       animState: this.player.animState,
+      chapterId: this.activeMode,
+      chapterTitle: this.levelDef.title,
       currentBeatTitle: currentBeat ? `${currentBeat.title} — ${currentBeat.subtitle}` : this.levelDef.title,
       currentBeatIndex: currentBeat ? currentBeat.index : 1,
       activeCheckpointId: this.checkpoint?.isActivated ? this.checkpoint.id : null,
       restoredCount,
       totalRestorable,
       chapterCompleted: this.isChapterRestored,
+      activeDialogue: this.latestDialogueBubble,
+      trialElapsedSec: Number(this.trialElapsedSec.toFixed(1)),
+      trialSeed: this.activeMode === 'wake_trial' ? this.trialSeed : null,
+      trialDifficulty: this.activeMode === 'wake_trial' ? this.trialDifficulty : null,
     });
   }
 
@@ -487,29 +657,39 @@ export class GameplayScene extends Phaser.Scene {
 
   public setPausedState(paused: boolean): void {
     if (paused) {
+      InputManager.clearAll();
       this.physics.world.pause();
     } else {
       this.physics.world.resume();
     }
   }
 
+  public dismissDialogue(): void {
+    this.dialogueManager?.dismissCurrent();
+  }
+
   public restartFromCheckpoint(): void {
     this.triggerHazardRespawn();
   }
 
-  public switchLevelMode(mode: LevelMode, resetAllProgress = false): void {
-    if (resetAllProgress) {
-      SaveManager.resetProgress();
+  public loadCampaignChapter(chapterId: CampaignChapterId, resetChapterProgress = false): void {
+    if (resetChapterProgress) {
+      SaveManager.resetChapterProgress(chapterId);
     }
-    SaveManager.save({ levelMode: mode });
-    this.levelMode = mode;
-    this.levelDef = mode === 'prototype_sandbox' ? PROTOTYPE_SANDBOX_LEVEL : SLEEPING_CANOPY_LEVEL;
+    SaveManager.setCurrentChapter(chapterId);
+    this.activeMode = chapterId;
+    this.resolveLevelDefinition();
     this.buildLevelWorld();
   }
 
-  public syncPlayerHitbox(): void {
-    if (this.player) {
-      this.player.syncHitbox();
-    }
+  public startWakeTrial(difficulty: TrialDifficulty, seed?: string): void {
+    this.trialDifficulty = difficulty;
+    this.trialSeed =
+      seed && seed.trim().length > 0
+        ? seed.trim().toUpperCase()
+        : WakeTrialsGenerator.generateSeedCode(difficulty);
+    this.activeMode = 'wake_trial';
+    this.resolveLevelDefinition();
+    this.buildLevelWorld();
   }
 }

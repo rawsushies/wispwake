@@ -1,0 +1,43 @@
+name: Bug Report
+description: Report a gameplay, physics, visual, or platform bug in Wispwake
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve **Wispwake**! Please fill out the details below.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected System
+      options:
+        - Nima Movement / Physics / Respawn
+        - Pip Companion / Dialogue Bubbles
+        - Wake Mechanic / Interactive Flora
+        - Campaign Chapter (01–04)
+        - Wake Trials (Procedural Mode)
+        - Visuals / 2.5D Lighting / Parallax
+        - Mobile Touch / Gamepad Controls
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the issue and what you expected to happen instead.
+      placeholder: "When activating the checkpoint in Chapter 02..."
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: Chapter or Wake Trial Seed (if applicable)
+      placeholder: "e.g. Chapter 02 or HARD-4912"
+  - type: input
+    id: environment
+    attributes:
+      label: Device & Browser
+      placeholder: "e.g. macOS Chrome 131 / iPad Safari / Android Chrome"
+    validations:
+      required: true

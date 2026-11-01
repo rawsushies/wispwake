@@ -2,7 +2,5 @@
   "name": "Wispwake — A Journey Through a Sleeping World",
   "description": "A hand-painted 2D exploration platformer set in the Veilgrove. Guide Nima and her moth-like companion Pip as you release the Wake pulse to awaken dormant plants, uncoil root bridges, and restore light to a sleeping world.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

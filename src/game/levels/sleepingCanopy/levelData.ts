@@ -42,9 +42,12 @@ export interface BeatZone {
   maxX: number;
 }
 
+export type BiomeTheme = 'canopy' | 'marsh' | 'cavern' | 'ruins';
+
 export interface LevelDefinition {
   id: string;
   title: string;
+  biomeTheme?: BiomeTheme;
   width: number;
   height: number;
   spawnX: number;

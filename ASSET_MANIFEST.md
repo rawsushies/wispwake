@@ -1,35 +1,47 @@
-# Wispwake — Asset Manifest & Production Inventory (Milestone 3)
+# Wispwake — Asset Provenance & Runtime Manifest (Milestone 4)
 
-This manifest documents every visual and audio asset implemented for **Wispwake — Chapter 01: The Sleeping Canopy**, including the Milestone 3 character redesigns, 6-layer living Veilgrove environment plates, and organic terrain art kit.
-
-## 1. Original Hand-Painted Character & Environment Artwork (Priority 1)
-
-| Asset Filename | Category | Intended Purpose | Dimensions | Format | Animation / Layer Info | Source / Generation Method | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `/src/assets/images/ref_nima_pip_concept_1793515706089.jpg` | `characters/reference` | Canonical design authority for Nima (leaf cloak, satchel, glowing seed) and Pip (Spirit Lilac & Wake Mint moth wings) | `1024×1024` (`1:1`) | `JPG` | Canonical Reference Sheet | AI Studio Workspace Generation | **Verified & Preserved** |
-| `/src/assets/images/nima_side_gameplay_master_1793518602554.jpg` | `characters/nima` | High-resolution hand-painted side-profile gameplay master of Nima derived directly from `ref_nima_pip_concept` | `1024×1024` (`1:1`) | `JPG` -> Extracted Transparent Cutout Atlas (`nima_sheet`) | 4-part skeletal cutout rig (`idle` 8f, `run` 10f, `jump_start` 3f, `rise` 3f, `fall` 3f, `land` 4f, `wake_cast` 6f, `respawn` 4f) | AI Studio Workspace Generation + `CharacterArtManager.ts` | **Implemented & Verified** |
-| `/src/assets/images/pip_gameplay_master_1793518604109.jpg` | `characters/pip` | High-resolution hand-painted gameplay master of Pip the moth companion derived directly from `ref_nima_pip_concept` | `1024×1024` (`1:1`) | `JPG` -> Extracted Transparent Cutout Atlas (`pip_sheet`) | Articulated wing-flap & curiosity cutout rig (`hover` 6f, `follow` 6f, `curious` 4f, `wake_react` 6f) | AI Studio Workspace Generation + `CharacterArtManager.ts` | **Implemented & Verified** |
-| `/src/assets/images/bg_canopy_far_sky_1793515701725.jpg` | `world/sleeping_canopy/far_sky` | **Layer 1 (Far Sky)**: Twilight sky and colossal ancient canopy silhouettes (`0.05x` parallax) | `1920×1080` (`16:9`) | `JPG` | Slow horizontal parallax + restoration tint | AI Studio Workspace Generation | **Implemented & Verified** |
-| `/src/assets/images/env_distant_canopy_silhouettes_1793518606630.jpg` | `world/sleeping_canopy/distant` | **Layer 2 (Distant Environment)**: Receding rows of misty twilight forest trunks and ridges (`0.14x` parallax) | `1920×1080` (`16:9`) | `JPG` | Distant parallax layer paired with animated bird flocks | AI Studio Workspace Generation | **Implemented & Verified** |
-| `/src/assets/images/bg_canopy_giant_roots_1793515703954.jpg` | `world/sleeping_canopy/midground` | **Layer 3 (Midground Forest)**: Sweeping giant tree trunks, hanging moss, and Veil Teal mist (`0.26x` parallax) | `1920×1080` (`16:9`) | `JPG` | Midground parallax layer | AI Studio Workspace Generation | **Implemented & Verified** |
-| `/src/assets/images/env_near_twisted_roots_foliage_1793518606409.jpg` | `world/sleeping_canopy/near_environment` | **Layer 4 (Near Environment)**: Massive overarching twisted root arches, moss curtains, and giant leaves (`0.46x` parallax) | `1920×1080` (`16:9`) | `JPG` -> Keyed Transparent Layer (`env_near_twisted_roots_clean`) | Non-uniformly scaled/flipped archway plates | AI Studio Workspace Generation + `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `/src/assets/images/ref_ancient_bloom_shrine_1793515704899.jpg` | `objects/blooms` | Canonical landmark illustration for Beat 7 Ancient Bloom restoration finale | `1280×960` (`4:3`) | `JPG` | End-of-slice restoration vignette | AI Studio Workspace Generation | **Implemented & Verified** |
+Every visual and audio asset in **Wispwake — A Journey Through a Sleeping World** is cataloged below with its canonical source, resolution, runtime texture key, and honest verification status (`PLANNED`, `GENERATED`, `INTEGRATED`, `RUNTIME TESTED`, `APPROVED`).
 
 ---
 
-## 2. Organic Terrain Kit, Ambient Wildlife & Reactive Flora Atlases
+## 1. Canonical Character & Companion Art Masters
 
-| Asset Key | Category | Intended Purpose | Dimensions | Format | Animation / Behavior | Source Module | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `org_plat_*` | `terrain/root_platforms` & `stone_platforms` | Multi-element organic ancient root and mossy stone formations with uneven moss mantles, shelf fungi, surface ferns, and hanging roots extending below the collision box | Dynamic per platform (`width+48 × height+62`) | Transparent Canvas (`PNG`) | Separate visual sprite aligned with crisp walkable top edge; transforms on restoration | `TerrainVisualAssembler.ts` | **Implemented & Verified** |
-| `hazard_bramble` | `terrain/hazards` | Gnarled organic Ember Coral (`#E98372`) thorn clusters growing from twisted roots with bioluminescent warning pods | `136×56` | Transparent Canvas (`PNG`) | High-contrast silhouette & warning glow | `TerrainVisualAssembler.ts` | **Implemented & Verified** |
-| `env_bird_sheet` | `world/sleeping_canopy/ambient_creatures` | Distant canopy bird flocks flying across Layer 2 at varied speeds and altitudes | `36×24` per frame (`4 frames`) | Transparent Sprite Sheet (`PNG`) | `bird_flap` (9 fps loop) + sine flight trajectory | `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `env_reactive_flora_0..2` | `terrain/vegetation` | Surface ferns and sleeping veil-bell buds that bend when Nima runs past and glow when pulsed by Wake | `64×56` | Transparent Canvas (`PNG`) | Spring-damped wind sway + player collision bend + Wake spore emission | `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `env_hanging_vine` | `world/sleeping_canopy/near_environment` | Hanging canopy moss vines swaying independently and reacting to Wake pulses | `48×160` | Transparent Canvas (`PNG`) | Independent wind oscillation + Wake excitation | `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `env_fg_botanical` | `world/sleeping_canopy/foreground` | **Layer 5 (Foreground)**: Painted canopy bough and fern silhouettes framing the top viewport (`1.18x` parallax) | `220×130` | Transparent Canvas (`PNG`) | Fast foreground parallax; never obscures Nima or platforms | `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `env_fog_bank` & `env_light_ray` | `effects/lighting` & `particles` | **Layer 6 (Atmosphere)**: Drifting mist banks, volumetric canopy light rays, and multi-depth glowing spores | `380×110` / `180×540` | Transparent Additive/Alpha Canvas | Independent drift + Grand Restoration intensification | `LivingEnvironmentSystem.ts` | **Implemented & Verified** |
-| `bloom_platform_sheet` | `objects/blooms` | Wake-reactive flower bud that unfurls into a temporary (`5.2s`, refreshable) golden platform | `140×120` per frame (`16 frames`) | Transparent Sprite Sheet (`PNG`) | `dormant` (4f), `awakening` (4f), `active` (4f), `closing` (4f) | `AtlasBuilder.ts` | **Implemented & Verified** |
-| `root_bridge_sheet` | `objects/roots` | Dormant recessed root tendrils that uncoil into a permanent walkable bridge upon Wake pulse | `260×84` per frame (`10 frames`) | Transparent Sprite Sheet (`PNG`) | `recessed` (2f), `extending` (6f), `extended` (2f) | `AtlasBuilder.ts` | **Implemented & Verified** |
-| `drifter_sheet` | `creatures/drifter` | Translucent floating canopy organism acting as a predictable moving traversal platform | `160×104` per frame (`12 frames`) | Transparent Sprite Sheet (`PNG`) | `glide` (8f), `harmonize` (4f) | `AtlasBuilder.ts` | **Implemented & Verified** |
-| `checkpoint_cairn_sheet` | `objects/checkpoints` | Resonance Cairn checkpoint activated by proximity or Wake pulse | `96×136` per frame (`10 frames`) | Transparent Sprite Sheet (`PNG`) | `dormant` (2f), `activating` (4f), `active` (4f) | `AtlasBuilder.ts` | **Implemented & Verified** |
-| `ancient_bloom_sheet` | `objects/blooms` | Beat 7 chapter restoration landmark atop the canopy summit | `280×260` per frame (`12 frames`) | Transparent Sprite Sheet (`PNG`) | `sleeping` (4f), `restoring` (4f), `radiant` (4f) | `AtlasBuilder.ts` | **Implemented & Verified** |
+| Asset ID | File Path | Source / Provenance | Dimensions | Runtime Key / Atlas | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `ref_nima_pip_concept` | `src/assets/images/ref_nima_pip_concept_1793515706089.jpg` | Original AI-Generated Concept Art (Visual Bible Sec. 05) | `1024×1024` | Credits & Visual Bible Reference | `APPROVED` |
+| `nima_side_gameplay_master` | `src/assets/images/nima_side_gameplay_master_1793518602554.jpg` | Original AI-Generated Side-Profile Gameplay Master | `1024×1024` | `nima_master_raw` → `nima_sheet` (Idle, Jump, Fall, Land, Wake) | `APPROVED` |
+| `nima_run_contact_pose` | `src/assets/images/nima_run_contact_pose_1793520804478.jpg` | Original AI-Generated Full-Body Running Contact Stride Pose | `1024×1024` | `nima_run_contact_raw` → `nima_sheet` (Run Frames 8..17) | `RUNTIME TESTED` |
+| `nima_run_passing_pose` | `src/assets/images/nima_run_passing_pose_1793520806672.jpg` | Original AI-Generated Full-Body Running Passing Stride Pose | `1024×1024` | `nima_run_passing_raw` → `nima_sheet` (Run Frames 8..17) | `RUNTIME TESTED` |
+| `pip_companion_master` | `src/assets/images/pip_companion_master_1793518605829.jpg` | Original AI-Generated Luminous Moth-Sprite Master | `1024×1024` | `pip_master_raw` → `pip_sheet` (Frames 0..11) | `APPROVED` |
+
+---
+
+## 2. Multi-Biome Environment & Parallax Plates (Chapters 01–04)
+
+| Asset ID | File Path | Source / Provenance | Dimensions | Parallax / Layer Role | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `bg_canopy_far_sky` | `src/assets/images/bg_canopy_far_sky_1793515702210.jpg` | Original AI-Generated Chapter 01 Twilight Canopy Plate | `1344×768` | Chapter 01 Far Sky (`0.05x`) | `APPROVED` |
+| `bg_moonlit_marsh_plate` | `src/assets/images/bg_moonlit_marsh_plate_1793520808533.jpg` | Original AI-Generated Chapter 02 Moonlit Marsh Plate | `1344×768` | Chapter 02 Far Sky (`0.05x`) | `RUNTIME TESTED` |
+| `bg_hollow_below_plate` | `src/assets/images/bg_hollow_below_plate_1793520810711.jpg` | Original AI-Generated Chapter 03 Hollow Below Cavern Plate | `1344×768` | Chapter 03 Far Sky (`0.05x`) | `RUNTIME TESTED` |
+| `bg_windward_ruins_plate` | `src/assets/images/bg_windward_ruins_plate_1793520811669.jpg` | Original AI-Generated Chapter 04 Windward Ruins Plate | `1344×768` | Chapter 04 Far Sky (`0.05x`) | `RUNTIME TESTED` |
+| `env_distant_canopy_silhouettes` | `src/assets/images/env_distant_canopy_silhouettes_1793518605060.jpg` | Original AI-Generated Layer 2 Distant Canopy Plate | `1344×768` | Layer 2 Distant Trees (`0.14x`) | `APPROVED` |
+| `bg_canopy_giant_roots` | `src/assets/images/bg_canopy_giant_roots_1793515702546.jpg` | Original AI-Generated Layer 3 Midground Forest Plate | `1344×768` | Layer 3 Midground Forest (`0.26x`) | `APPROVED` |
+| `env_near_twisted_roots` | `src/assets/images/env_near_twisted_roots_1793518604954.jpg` | Original AI-Generated Layer 4 Near Root Archways (Keyed) | `1344×768` | Layer 4 Near Arches (`0.46x`) | `APPROVED` |
+| `ref_ancient_bloom_shrine` | `src/assets/images/ref_ancient_bloom_shrine_1793515708787.jpg` | Original AI-Generated Ancient Bloom Shrine Illustration | `1344×768` | Chapter Completion & Shrine Reference | `APPROVED` |
+
+---
+
+## 3. Procedural Canvas Atlases & Dynamic Lighting Textures (`AtlasBuilder`, `TerrainVisualAssembler`, `LightingSystem`)
+
+| Runtime Key | Generator Module | Dimensions | Purpose | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `nima_sheet` | `CharacterArtManager.ts` | `2688×112` (28 frames) | Full-body pose-interpolated character sheet (`idle`, `run`, `jump`, `fall`, `land`, `wake`) | `RUNTIME TESTED` |
+| `pip_sheet` | `CharacterArtManager.ts` | `768×64` (12 frames) | Articulated 4-wing moth companion sheet (`hover`, `dart`, `pulse`) | `APPROVED` |
+| `bloom_sheet` | `AtlasBuilder.ts` | `384×64` (3 frames) | Wake-reactive BloomPlatform (`dormant`, `opening`, `open`) | `APPROVED` |
+| `root_bridge_sheet` | `AtlasBuilder.ts` | `640×48` (2 frames) | Wake-reactive RootBridge (`recessed`, `extended`) | `APPROVED` |
+| `drifter_sheet` | `AtlasBuilder.ts` | `192×56` (2 frames) | Bioluminescent beetle-creature platform (`calm`, `amplified`) | `APPROVED` |
+| `checkpoint_sheet` | `AtlasBuilder.ts` | `128×96` (2 frames) | Hollow Root Lantern checkpoint (`dormant`, `lit`) | `APPROVED` |
+| `ancient_bloom_sheet` | `AtlasBuilder.ts` | `320×160` (2 frames) | Chapter Finale Ancient Bloom Shrine (`dormant`, `restored`) | `APPROVED` |
+| `org_plat_*` | `TerrainVisualAssembler.ts` | Dynamic per platform | Multi-biome organic root/stone/marsh/cavern/ruin terrain formations | `RUNTIME TESTED` |
+| `env_upper_canopy_bough` | `LivingEnvironmentSystem.ts` | `340×165` | Upper Canopy overhanging branches & bioluminescent blossoms | `RUNTIME TESTED` |
+| `dynamic_lightmap_rt` | `LightingSystem.ts` | `320×180` (2× scale) | Real-time MULTIPLY darkness & localized dynamic lightmap | `RUNTIME TESTED` |

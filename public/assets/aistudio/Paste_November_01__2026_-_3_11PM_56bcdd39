@@ -1,0 +1,1599 @@
+
+PROJECT: WIS PWAKE
+MILESTONE 4 — CAMPAIGN, COMPANION, LIGHTING & PLATFORM EXPANSION
+
+REPOSITORY:
+https://github.com/rawsushies/wispwake
+
+CANONICAL DESIGN DOCUMENT:
+Wispwake — Game Design & Visual Bible
+
+CURRENT ENGINE:
+React + TypeScript + Vite + Phaser 3 + Arcade Physics
+
+============================================================
+PROJECT OBJECTIVE
+============================================================
+
+We are continuing an existing playable 2D platformer.
+
+This is NOT a new project.
+
+We are moving from an early playable prototype toward
+a proper story-driven exploration platformer.
+
+The next development stage must address:
+
+1. Fix Nima's broken running animation.
+2. Expand Pip into an interactive helper and narrator.
+3. Rebuild checkpoint and respawn reliability.
+4. Create additional story-based levels.
+5. Implement an optional procedural challenge generator.
+6. Make the upper environment and foreground more alive.
+7. Introduce a hybrid dynamic 2D/2.5D lighting system.
+8. Implement proper mobile and tablet gameplay controls.
+9. Prepare the GitHub repository for open-source development.
+10. Update asset documentation and repository metadata.
+
+The project must retain its existing identity.
+
+DO NOT replace Wispwake with a generic platformer.
+
+DO NOT rewrite working gameplay systems unnecessarily.
+
+DO NOT sacrifice existing gameplay functionality.
+
+DO NOT claim a feature is complete without testing it.
+
+============================================================
+01. REPOSITORY BASELINE AND PRESERVATION
+============================================================
+
+Inspect the complete latest repository before modifying code.
+
+Read:
+- Game Design & Visual Bible.
+- ASSET_MANIFEST.md.
+- Existing README and repository documentation, if present.
+- package.json and bun.lock.
+- metadata.json.
+- All game entities.
+- GameplayScene.
+- Existing game systems.
+- Existing level data.
+- Existing character art.
+- Existing environment artwork.
+
+Inspect the current main branch and its latest commit.
+
+Preserve all working systems from Milestone 3.
+
+Create a recoverable Git checkpoint or development branch
+if supported by the environment.
+
+Do not delete existing character or environment artwork.
+
+Do not perform a destructive architecture rewrite.
+
+Do not change the fundamental movement tuning unless
+a demonstrated gameplay defect requires it.
+
+The existing movement feels acceptable.
+
+The existing Wake mechanic feels acceptable.
+
+Pip's current visual animation is acceptable.
+
+Preserve these successful foundations.
+
+============================================================
+02. PRIORITY ONE — REBUILD NIMA'S RUNNING ANIMATION
+============================================================
+
+CRITICAL VISUAL DEFECT:
+
+The current Nima running animation looks severely unnatural.
+
+The current CharacterArtManager.ts takes a static illustrated
+character, cuts it into body regions, and transforms the regions.
+
+The current implementation draws the same lower-body source
+segment twice to represent both legs.
+
+This produces unnatural duplicated anatomy and overlapping
+limb movement.
+
+THIS IMPLEMENTATION MUST NOT REMAIN THE FINAL RUNNING ANIMATION.
+
+CANONICAL CHARACTER REFERENCE:
+
+src/assets/images/ref_nima_pip_concept_1793515706089.jpg
+
+APPROVED GAMEPLAY MASTER:
+
+src/assets/images/nima_side_gameplay_master_1793518602554.jpg
+
+Use these as the character design authority.
+
+Do not redesign Nima's identity.
+
+Preserve:
+- Tousled chestnut hair.
+- Recognizable facial appearance.
+- Leaf cloak.
+- Embroidered details.
+- Satchel.
+- Clothing proportions.
+- Glowing golden seed.
+- Hand-painted fantasy appearance.
+
+NEW ANIMATION STRATEGY:
+
+Prioritize creating complete illustrated poses rather than
+attempting to animate the entire character through crude
+horizontal image slicing.
+
+Create a genuinely convincing side-view running cycle.
+
+Produce at least 8-10 distinct full-body animation frames.
+
+Required animation states:
+
+- Idle.
+- Run.
+- Jump anticipation.
+- Rising.
+- Falling.
+- Landing.
+- Wake casting.
+- Respawning.
+
+RUNNING ANIMATION REQUIREMENTS:
+
+The running cycle must have:
+- Natural alternating leg movement.
+- Clear foot contact with the ground.
+- Proper weight transfer.
+- Body movement that follows the running rhythm.
+- Natural cloak motion.
+- Appropriate head movement.
+- Visible seed illumination.
+- Consistent anatomy between frames.
+
+Do not duplicate identical legs.
+
+Do not distort the character's anatomy to simulate speed.
+
+Do not make Nima stretch, squash, or rotate excessively.
+
+Do not generate unrelated character interpretations
+for different frames.
+
+ART PRODUCTION:
+
+Use the available Google AI Studio development workspace
+to create consistent original character artwork.
+
+Use the same approved visual reference for all generated poses.
+
+Generate individual consistent keyframes when a full sprite
+sheet generation produces inconsistent anatomy.
+
+Export the frames into a properly aligned sprite atlas.
+
+Verify:
+- Frame alignment.
+- Transparent background.
+- Consistent character scale.
+- Consistent feet position.
+- Consistent proportions.
+- No visible background remnants.
+- No anatomical duplication.
+
+ALTERNATIVE:
+
+If individual image generation produces inconsistent frames,
+use carefully separated artwork layers with correct anatomical
+segmentation and independent pivots.
+
+Only use this approach when individual parts are genuinely
+separated.
+
+Never draw the entire same leg region twice.
+
+Preserve the existing Player physics and collision body.
+
+Update sprite dimensions and offsets as necessary.
+
+The final animation must look like Nima from the original
+illustration brought to life.
+
+PIP:
+
+Pip's current visual appearance and animation are approved.
+
+Do not unnecessarily regenerate or redesign Pip.
+
+Retain the current Pip artwork and animation quality.
+
+Focus on expanding Pip's functionality in later sections.
+
+============================================================
+03. PRIORITY TWO — PIP AS HELPER AND NARRATOR
+============================================================
+
+Pip is not merely a floating decorative companion.
+
+Pip must become one of the most important parts of the
+player's experience.
+
+Pip has THREE responsibilities:
+
+A. COMPANION
+B. ENVIRONMENTAL HELPER
+C. STORY NARRATOR
+
+A. COMPANION BEHAVIOR
+
+Pip should:
+- Follow Nima naturally.
+- Hover and react to movement.
+- Look toward interesting objects.
+- React to dangerous situations.
+- Celebrate discoveries.
+- React emotionally during story moments.
+- Display curiosity.
+- React when Nima uses Wake.
+
+Do not make Pip behave like a rigid navigation marker.
+
+B. ENVIRONMENTAL HELP
+
+Pip should help players understand nearby interactions.
+
+Examples:
+
+When approaching a dormant flower:
+- Pip notices the flower.
+- Pip flies toward it slightly.
+- Its wings or body glow.
+- A subtle visual cue communicates interest.
+
+When approaching an unexplored path:
+- Pip may look or hover in the direction of discovery.
+
+When a player struggles with an environmental puzzle:
+- Pip may provide a subtle hint after an appropriate delay.
+
+Do not make Pip solve the puzzle automatically.
+
+Do not make Pip move the player.
+
+C. STORY NARRATOR
+
+Implement a proper dialogue and narration system.
+
+Pip should deliver:
+- Chapter introductions.
+- Short environmental observations.
+- Helpful gameplay hints.
+- Reactions to discoveries.
+- Emotional story moments.
+- Dialogue during important transitions.
+
+Use contextual triggers.
+
+Do not make Pip constantly speak.
+
+Do not repeat the same dialogue every time the player
+re-enters an area.
+
+Create a data-driven dialogue system.
+
+Suggested structure:
+
+dialogue/
+  prologue.ts
+  sleepingCanopy.ts
+  moonlitMarsh.ts
+  hollowBelow.ts
+  windwardRuins.ts
+
+Each dialogue entry should support:
+
+- Unique dialogue identifier.
+- Trigger condition.
+- Text.
+- Priority.
+- Optional speaker.
+- Optional sound reference.
+- Display duration.
+- Once-per-save behavior.
+
+VISUAL PRESENTATION:
+
+Use elegant speech bubbles or subtle subtitle cards
+integrated into the game's visual style.
+
+Place the dialogue near Pip without obscuring Nima.
+
+Avoid large modern chat windows.
+
+LANGUAGE:
+
+Use simple, accessible everyday English.
+
+Avoid complicated scientific, astronomical, aerospace,
+or overly literary terminology.
+
+Example:
+
+"That little flower is still asleep."
+
+"Try sending it a Wake pulse."
+
+"There's something moving over there."
+
+"Careful, Nima. The path ends ahead."
+
+"Look at those lights. They're coming back."
+
+These are examples of tone, not mandatory dialogue.
+
+The dialogue should feel magical, emotional and natural.
+
+Support:
+- Subtitle visibility.
+- Dialogue timing.
+- Skip or dismiss.
+- No repeated unwanted dialogue.
+- Future voice acting compatibility.
+
+Voice acting is optional for this milestone.
+
+Do not use runtime AI text generation.
+
+All game dialogue must be authored and stored in the project.
+
+============================================================
+04. PRIORITY THREE — FIX CHECKPOINT AND RESPAWN
+============================================================
+
+CRITICAL GAMEPLAY DEFECT:
+
+The player currently falls or behaves incorrectly after
+dying and respawning at an activated checkpoint.
+
+Investigate the actual geometry and spawn logic.
+
+Relevant files:
+
+Checkpoint.ts
+Player.ts
+GameplayScene.ts
+SaveManager.ts
+levelData.ts
+
+The current checkpoint position and player collision
+geometry are likely inconsistent.
+
+In particular:
+
+- Checkpoint data currently uses x: 2135, y: 420.
+- The saved spawn position is calculated with y - 16.
+- The player uses a 96x112 visual frame.
+- The player collision body is 34x72 with a vertical offset.
+
+Do not blindly retain the existing fixed spawn offset.
+
+NEW REQUIREMENTS:
+
+A. SAFE SPAWN POSITION
+
+Calculate the player's actual collision bounds.
+
+Determine the supporting platform's walkable top surface.
+
+Place the player safely ABOVE that surface.
+
+Account for:
+- Sprite origin.
+- Display dimensions.
+- Physics body dimensions.
+- Physics body offset.
+- Platform top position.
+- Required safety margin.
+
+Do not position the player inside the platform.
+
+Do not position the player above an unsupported gap.
+
+B. PHYSICS RESET
+
+When respawning:
+
+- Reset sprite position.
+- Synchronize/reset the physics body correctly.
+- Clear horizontal velocity.
+- Clear vertical velocity.
+- Clear acceleration.
+- Clear stale collision contacts.
+- Reset jump state.
+- Reset coyote timer.
+- Reset jump buffer.
+- Reset input history.
+- Ensure gravity is correctly restored.
+- Re-establish a stable grounded state.
+
+Do not assume changing the sprite coordinates alone
+is sufficient to reset Arcade Physics.
+
+Use the correct Phaser body synchronization/reset behavior.
+
+C. CHECKPOINT PERSISTENCE
+
+An activated checkpoint must remain activated after death
+and after refreshing the browser.
+
+Preserve the correct progress associated with that checkpoint.
+
+Respawn should restore:
+- Player.
+- Pip position.
+- Camera position.
+- Temporary bloom state.
+- Drifter position.
+- Relevant environmental state.
+
+Previously activated permanent root bridges must remain
+activated if that is the intended progression behavior.
+
+D. FAIRNESS
+
+Provide brief respawn protection where appropriate.
+
+Prevent immediate repeated damage during the respawn animation.
+
+Do not make the player invulnerable indefinitely.
+
+E. TESTS
+
+Test:
+
+1. Activate the checkpoint.
+2. Die in a hazard.
+3. Respawn.
+4. Remain standing on the platform.
+5. Wait for several seconds.
+6. Move and jump normally.
+7. Die again.
+8. Verify the second respawn works.
+9. Refresh the browser.
+10. Verify the saved checkpoint still works.
+
+Repeat with falling out of the level.
+
+THIS BUG IS NOT ACCEPTED AS FIXED UNTIL TESTED.
+
+============================================================
+05. STORY CAMPAIGN EXPANSION
+============================================================
+
+The current Sleeping Canopy is an introductory tutorial.
+
+It is not yet a complete long-form adventure.
+
+Preserve it as the opening chapter.
+
+Expand the game into FOUR DISTINCT STORY LEVELS.
+
+Use a reusable level registry and modular level architecture.
+
+Do not build every level inside GameplayScene.ts.
+
+Create a clean level selection and progression system.
+
+PROPOSED CAMPAIGN:
+
+LEVEL 01 — THE SLEEPING CANOPY
+
+Purpose:
+- Introduce Nima and Pip.
+- Teach movement.
+- Teach jumping.
+- Introduce Wake.
+- Teach environmental interaction.
+- Reveal the first signs of the Stillness.
+
+Keep the existing seven-beat structure.
+
+Improve repetitive layouts and add environmental storytelling.
+
+LEVEL 02 — THE MOONLIT MARSH
+
+Visual identity:
+- Reflective dark water.
+- Blue-green reeds.
+- Glowing water flowers.
+- Mist.
+- Floating pollen.
+- Tiny marsh creatures.
+- Ancient partially submerged structures.
+
+Gameplay:
+- More varied jump sequences.
+- Wake-reactive marsh plants.
+- Moving environmental platforms.
+- Water-adjacent hazards.
+- Optional exploration routes.
+- Environmental puzzles.
+
+Create a distinct level layout.
+
+Do not simply reuse Sleeping Canopy geometry.
+
+LEVEL 03 — THE HOLLOW BELOW
+
+Visual identity:
+- Underground giant roots.
+- Glowing mushrooms.
+- Deep caves.
+- Bioluminescent pools.
+- Hanging rock formations.
+- Dark vertical shafts.
+- Strange cave organisms.
+
+Gameplay:
+- More vertical platforming.
+- Careful jumps across cave openings.
+- Wake-based environmental discovery.
+- Interconnected passages.
+- Hidden exploration areas.
+- Checkpoint placement based on challenge pacing.
+
+Create an actual playable level.
+
+LEVEL 04 — THE WINDWARD RUINS
+
+Visual identity:
+- Ancient elevated ruins.
+- Broken bridges.
+- Open skies.
+- Floating vegetation.
+- Vast distant landscapes.
+- Wind-driven vegetation.
+- Atmospheric cloud formations.
+
+Gameplay:
+- Longer traversal sequences.
+- Moving platforms.
+- Wind-influenced environmental objects.
+- More challenging Wake puzzles.
+- Multi-stage exploration.
+- Meaningful story climax for the first playable arc.
+
+Do not add new player abilities without a clear design
+reason and proper implementation.
+
+The existing movement and Wake systems should support
+the initial campaign.
+
+============================================================
+06. LEVEL DESIGN REQUIREMENTS
+============================================================
+
+Every campaign level must have its own identity.
+
+Do not copy the same layout and replace the background.
+
+Each level must contain:
+
+1. A distinct opening.
+2. A clear player objective.
+3. Several environmental discoveries.
+4. Meaningful traversal challenges.
+5. Pip dialogue events.
+6. A checkpoint.
+7. At least one memorable setpiece.
+8. Environmental storytelling.
+9. A climax.
+10. A satisfying transition or ending.
+
+Recommended target:
+Approximately 8-15 minutes per level, depending on
+exploration and player skill.
+
+These are targets, not artificial timers.
+
+Use varied level structures:
+
+- Long traversal areas.
+- Vertical sections.
+- Narrow passages.
+- Open scenic spaces.
+- Hidden branches.
+- Environmental puzzles.
+- Moving platform sections.
+- Rest areas.
+- Story moments.
+
+Avoid repetitive sequences of identical rectangular platforms.
+
+Every important jump must be fair and readable.
+
+Add optional secrets and small discoveries.
+
+Do not overload the levels with unnecessary collectibles.
+
+CAMPAIGN PROGRESSION:
+
+Implement:
+- Chapter selection.
+- Sequential level unlocking.
+- Completed chapter state.
+- Resume from saved progress.
+- Replay completed levels.
+- Chapter transition scenes.
+- Story progression.
+
+Use a versioned SaveManager schema.
+
+Provide safe migration from previous save data.
+
+Do not erase existing user settings or valid progress.
+
+============================================================
+07. PROCEDURAL WAKE TRIALS
+============================================================
+
+This is a separate game mode.
+
+Do NOT procedurally generate the main narrative campaign.
+
+Create an optional mode called:
+
+WAKE TRIALS
+
+It generates replayable platforming challenges from
+curated, validated level segments.
+
+DIFFICULTIES:
+
+EASY:
+- Longer platforms.
+- Wider jumps.
+- Fewer hazards.
+- Slower environmental obstacles.
+- Generous checkpoints.
+
+MEDIUM:
+- Standard traversal.
+- Balanced gaps.
+- Moderate hazard placement.
+- More varied Wake combinations.
+
+HARD:
+- Narrower landing surfaces.
+- More demanding jumps.
+- Combined environmental challenges.
+- Fewer checkpoints.
+- More complex sequences.
+
+EXTREME:
+- Precision jumps.
+- Advanced sequences.
+- Challenging hazard arrangements.
+- Narrower timing windows.
+- Limited safety margins.
+
+Extreme must remain physically possible.
+
+Do not create impossible random levels.
+
+GENERATION ARCHITECTURE:
+
+Build modular level segments with:
+- Entry anchors.
+- Exit anchors.
+- Platform definitions.
+- Hazard definitions.
+- Required clearance.
+- Vertical displacement.
+- Jump requirements.
+- Optional Wake interactions.
+- Difficulty rating.
+
+Connect segments using verified traversal constraints.
+
+Use the existing physics tuning as the source of truth.
+
+Create a validation system that tests whether the player
+can traverse each generated segment.
+
+Validate:
+- Maximum jump distance.
+- Maximum jump height.
+- Landing width.
+- Platform clearance.
+- Hazard placement.
+- Spawn positions.
+- Exit reachability.
+- Checkpoint accessibility.
+
+If generation fails validation:
+- Try another compatible segment.
+- Regenerate deterministically.
+- Use a safe fallback layout if necessary.
+
+Use a deterministic seed.
+
+Display the seed so players can share challenges.
+
+Allow:
+- Generate new challenge.
+- Retry current challenge.
+- Select difficulty.
+- View completion time.
+- Compare previous personal results.
+
+Do not change player physics to fake the difficulty.
+
+Difficulty should primarily come from level design.
+
+============================================================
+08. EXPAND THE UPPER ENVIRONMENT AND FOREGROUND LIFE
+============================================================
+
+The existing environment has improved, but the visible
+upper part of the gameplay frame still feels too empty.
+
+Current vegetation and organic platform decoration are
+concentrated mostly below Nima.
+
+We need environmental life ABOVE Pip and Nima as well.
+
+Create additional visual compositions at different heights.
+
+Add:
+
+- Overhead tree branches.
+- Large canopy silhouettes.
+- Hanging vines.
+- Suspended moss.
+- Floating blossoms.
+- Small flying creatures.
+- Distant bird movement.
+- Hanging botanical structures.
+- Moving leaves.
+- Foreground branch silhouettes.
+- Occasional drifting petals.
+
+Create several vertical environment bands:
+
+UPPER CANOPY:
+Tree branches and large foliage.
+
+UPPER MIDGROUND:
+Hanging vines and small flying creatures.
+
+PLAYER HEIGHT:
+Natural environmental framing without obscuring the player.
+
+LOWER ENVIRONMENT:
+Existing terrain, roots and vegetation.
+
+FOREGROUND:
+Branches, leaves and large plants entering from the sides
+of the visible frame.
+
+IMPORTANT:
+
+The environment must not be limited to decorative platforms
+below the playable area.
+
+The space above Nima must also contribute to the world.
+
+Use multiple depth levels.
+
+Some branches should be behind the player.
+
+Some close foreground vegetation may overlap the scene
+at its edges.
+
+Never obscure the character or important gameplay geometry.
+
+Make the world visually rich throughout the entire
+960x540 gameplay viewport.
+
+Do not simply duplicate the same vine or fern.
+
+Use varied placement, scale, silhouette and animation.
+
+============================================================
+09. HYBRID 2D / 2.5D LIGHTING SYSTEM
+============================================================
+
+The current visual lighting is not sufficiently distinctive.
+
+We want a gloomy, magical, cinematic environment.
+
+Explore a hybrid lighting architecture that combines
+2D gameplay with selected 2.5D visual techniques.
+
+IMPORTANT TECHNICAL BOUNDARY:
+
+We are not requiring hardware-accelerated real-time
+3D ray tracing.
+
+Do not introduce a full Three.js rendering scene merely
+to imitate advanced lighting.
+
+Do not sacrifice browser performance.
+
+Use the existing Phaser WebGL renderer and compatible
+shader or rendering techniques where practical.
+
+Implement a 2D/2.5D lighting system.
+
+A. DYNAMIC LIGHT SOURCES
+
+Create localized lighting sources from:
+
+- Nima's glowing seed.
+- Pip.
+- Wake pulses.
+- Awakened flowers.
+- Checkpoints.
+- Bioluminescent plants.
+- Environmental magical objects.
+
+Lights should have adjustable radius, intensity and color.
+
+B. DYNAMIC SHADOWS
+
+Introduce real-time 2D shadow projection where practical.
+
+Shadow sources:
+- Large tree trunks.
+- Overhanging roots.
+- Branches.
+- Platform formations.
+- Large foreground vegetation.
+
+Shadows should:
+- Follow a consistent light direction.
+- Change according to environmental lighting.
+- Be soft rather than excessively sharp.
+- Preserve gameplay readability.
+
+Use geometry-based shadow shapes or appropriate shader
+masking techniques.
+
+C. NORMAL-MAPPED LIGHTING
+
+Explore normal maps or equivalent directional lighting
+maps for selected environmental artwork.
+
+Allow light to interact with:
+- Bark.
+- Moss.
+- Rocks.
+- Leaves.
+- Character materials.
+- Magical objects.
+
+Do not create an overly expensive normal map for every
+tiny particle.
+
+Prioritize the most important visible surfaces.
+
+D. ATMOSPHERIC LIGHTING
+
+Implement:
+- Volumetric-style sunrays.
+- Light shafts through trees.
+- Atmospheric fog.
+- Controlled lens flares.
+- Directional light.
+- Localized glow.
+- Environmental color grading.
+- Depth-aware darkness.
+
+Light shafts should subtly change with the direction
+of the environmental light.
+
+Lens flares should be rare and restrained.
+
+Do not make the scene constantly bloom or flash.
+
+E. GLOOMY VISUAL IDENTITY
+
+The world should have stronger dark-to-light separation.
+
+Use:
+- Deep forest shadows.
+- Muted teal.
+- Desaturated green.
+- Indigo.
+- Purple accents.
+- Restrained warm golden light.
+- Selective luminous objects.
+
+Do not simply apply a dark overlay over the entire game.
+
+The gloom must come from actual lighting, depth and
+environmental composition.
+
+F. LIGHTING QUALITY SETTINGS
+
+Implement quality tiers:
+
+- Low.
+- Balanced.
+- High.
+- Automatic.
+
+Adjust lighting complexity based on hardware and display.
+
+Mobile devices should use simpler shadow and light passes.
+
+Preserve the ability to run on desktop systems comparable
+to GTX 1050 Ti with 16 GB RAM.
+
+Do not make ray tracing a requirement.
+
+The objective is a convincing cinematic appearance,
+not a technically expensive rendering label.
+
+============================================================
+10. RESPONSIVE MOBILE AND TABLET GAMEPLAY
+============================================================
+
+The game must support desktop, mobile phones and tablets.
+
+Current keyboard controls are not sufficient.
+
+Preserve existing desktop controls.
+
+ADD DEDICATED TOUCH CONTROLS.
+
+MOBILE GAMEPLAY LAYOUT:
+
+Prefer landscape orientation for the platformer.
+
+If the device is held vertically, show a tasteful
+rotate-device recommendation.
+
+Do not leave the player with a tiny unusable canvas.
+
+The game should scale properly for landscape phones
+and tablets.
+
+TOUCH CONTROL ARRANGEMENT:
+
+BOTTOM LEFT:
+- Move left.
+- Move right.
+
+BOTTOM RIGHT:
+- Jump.
+- Wake.
+
+TOP EDGE:
+- Pause.
+- Mute or sound settings where appropriate.
+
+CONTROL APPEARANCE:
+
+- Semi-transparent buttons.
+- Rounded organic visual style.
+- Matching Veilgrove palette.
+- Readable icons.
+- Subtle touch feedback.
+- Clear pressed state.
+- Comfortable thumb reach.
+
+BUTTON REQUIREMENTS:
+
+Use sufficiently large touch targets.
+
+Prefer approximately 56-72 CSS pixels depending on
+device size.
+
+Do not cover Nima or critical gameplay objects.
+
+INPUT ARCHITECTURE:
+
+Create a unified input system.
+
+It must combine:
+- Keyboard input.
+- Touch input.
+- Optional gamepad input.
+
+Multiple simultaneous touch inputs must work.
+
+For example:
+- Hold right while jumping.
+- Hold left while jumping.
+- Move and trigger Wake appropriately.
+
+Handle:
+- Pointer up.
+- Pointer cancel.
+- Lost pointer capture.
+- Browser focus loss.
+- Window resize.
+- Device rotation.
+
+Never leave a movement button stuck after touch ends.
+
+Prevent accidental browser scrolling and unwanted gestures
+while controlling the game.
+
+Do not break desktop keyboard input.
+
+RESPONSIVE UI:
+
+Adjust:
+- Menu spacing.
+- HUD.
+- Pause screen.
+- Dialogue bubbles.
+- Touch controls.
+- Settings.
+- Chapter selection.
+
+Support small phones and larger tablets.
+
+Use actual device-independent CSS sizing.
+
+The game canvas should remain readable and centered.
+
+Test common phone and tablet aspect ratios.
+
+============================================================
+11. GITHUB OPEN-SOURCE PREPARATION
+============================================================
+
+The repository is public, but a public repository without
+a clear licence does not automatically grant people
+permission to reuse its source code.
+
+Prepare Wispwake for public contributions.
+
+CREATE A PROFESSIONAL README.md.
+
+The README must include:
+
+1. Project title.
+2. Game description.
+3. Current development status.
+4. Actual gameplay screenshots.
+5. Gameplay GIF or short WebP preview where practical.
+6. Feature list.
+7. Controls.
+8. System requirements.
+9. Technology stack.
+10. Installation instructions.
+11. Local development instructions.
+12. Build instructions.
+13. Contribution instructions.
+14. Roadmap.
+15. Known limitations.
+16. Licence information.
+17. Links to the playable version.
+
+VISUAL PRESENTATION:
+
+Render actual game screenshots inside GitHub README.
+
+Create:
+
+docs/
+  screenshots/
+    title-screen.webp
+    sleeping-canopy-gameplay.webp
+    nima-animation.webp
+    pip-companion.webp
+    moonlit-marsh.webp
+    organic-environments.webp
+    dynamic-lighting.webp
+  media/
+    gameplay-preview.webp
+
+Only include screenshots from the actual running game.
+
+Do not use unimplemented concept art as proof of working
+game features.
+
+Use appropriate compressed formats.
+
+The README should look like a polished indie game repository.
+
+CREATE:
+
+- README.md
+- CONTRIBUTING.md
+- LICENSE
+- ASSET_LICENSE.md
+- CHANGELOG.md
+- SECURITY.md
+- CODE_OF_CONDUCT.md
+- docs/ROADMAP.md
+- docs/ARCHITECTURE.md
+
+CREATE GITHUB COMMUNITY TEMPLATES:
+
+.github/
+  ISSUE_TEMPLATE/
+    bug_report.yml
+    feature_request.yml
+  PULL_REQUEST_TEMPLATE.md
+
+Contributors should be able to:
+- Report a bug.
+- Suggest a feature.
+- Submit improvements.
+- Understand the architecture.
+- Run the project locally.
+- Understand the expected code quality.
+
+LICENSING:
+
+Use MIT as the proposed source-code licence.
+
+Keep artwork, audio and third-party asset licensing separate.
+
+Do not automatically apply the source-code licence
+to every image and audio file.
+
+For each asset, document its creator or source,
+provenance, licence and reuse restrictions.
+
+Only grant permissions that the project actually has.
+
+Identify assets with uncertain reuse rights.
+
+Provide clear contributor guidance.
+
+Do not bundle copyrighted assets from other games.
+
+============================================================
+12. GEMINI METADATA AND PROJECT CLEANUP
+============================================================
+
+The previous Art Forger functionality has been removed.
+
+Perform a repository-wide search for stale Gemini integration.
+
+Inspect:
+
+- metadata.json.
+- package.json.
+- bun.lock.
+- .env.example.
+- server.ts.
+- SaveManager.ts.
+- Remaining Gemini imports.
+- Old custom backdrop data.
+- Unused image generation configuration.
+
+The current metadata.json still declares:
+MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API
+
+This is stale if the game no longer provides that capability.
+
+Remove the stale capability declaration.
+
+Remove @google/genai from dependencies only if no actual
+remaining imports or functionality require it.
+
+Remove obsolete GEMINI_API_KEY documentation from
+.env.example if no longer used.
+
+Do not delete unrelated server functionality.
+
+The normal Vite/Express development server must continue working.
+
+Clean obsolete customBackdrops save fields where appropriate.
+
+Implement a safe save-data migration if the save schema
+changes.
+
+Do not erase existing settings or checkpoint progress
+during migration.
+
+The finished game must not require a Gemini API key
+to run.
+
+============================================================
+13. ASSET MANIFEST UPDATE
+============================================================
+
+Update ASSET_MANIFEST.md.
+
+It must describe the ACTUAL current project.
+
+Include:
+
+- Nima character master.
+- Nima animation frames.
+- Pip master.
+- Pip animation assets.
+- Each environmental layer.
+- Upper canopy artwork.
+- Foreground elements.
+- Organic terrain.
+- Ambient creatures.
+- Lighting assets.
+- Dialogue/audio assets.
+- UI artwork.
+- New campaign environment artwork.
+- Challenge mode assets.
+
+For each asset include:
+
+- Filename.
+- Category.
+- Dimensions.
+- Format.
+- Intended use.
+- Generation or creation source.
+- Animation details.
+- Licence.
+- Implementation state.
+
+Use honest asset status categories:
+
+PLANNED
+GENERATED
+INTEGRATED
+RUNTIME TESTED
+APPROVED
+
+IMPORTANT:
+
+Nima's existing walking animation is known to be defective.
+
+Do not mark it approved until the replacement animation
+has been integrated and visually tested.
+
+Do not mark an asset runtime-tested merely because
+it exists in the repository.
+
+Keep Pip's existing approved animation intact unless
+regression testing reveals a problem.
+
+============================================================
+14. DEVELOPMENT ARCHITECTURE
+============================================================
+
+Continue using Phaser 3 and the existing React architecture.
+
+Do not put the entire campaign into one giant scene file.
+
+Introduce maintainable systems.
+
+Suggested organization:
+
+src/
+  game/
+    entities/
+      player/
+      companion/
+      creatures/
+
+    systems/
+      InputManager.ts
+      DialogueManager.ts
+      CompanionHelperSystem.ts
+      CheckpointManager.ts
+      LevelRegistry.ts
+      LevelGenerator.ts
+      LevelValidator.ts
+      LightingSystem.ts
+      EnvironmentLayerManager.ts
+
+    levels/
+      sleepingCanopy/
+      moonlitMarsh/
+      hollowBelow/
+      windwardRuins/
+
+    dialogue/
+      prologue/
+      sleepingCanopy/
+      moonlitMarsh/
+      hollowBelow/
+      windwardRuins/
+
+  assets/
+    characters/
+    environments/
+    terrain/
+    creatures/
+    lighting/
+    effects/
+    audio/
+    ui/
+
+Do not create duplicate systems when an existing equivalent
+already works.
+
+Keep:
+- Rendering.
+- Input.
+- Physics.
+- Level definitions.
+- Dialogue.
+- Progression.
+- Lighting.
+- Asset loading.
+
+properly separated.
+
+Use reusable components.
+
+Avoid unnecessary runtime allocations.
+
+Use deterministic generation for procedural content.
+
+============================================================
+15. DEVELOPMENT EXECUTION ORDER
+============================================================
+
+This is a multi-system milestone.
+
+Execute in carefully sequenced sub-stages.
+
+STAGE A — STABILITY
+
+1. Fix Nima run animation.
+2. Fix checkpoint spawn geometry.
+3. Fix physics reset behavior.
+4. Test existing movement.
+5. Test existing Wake interactions.
+
+STAGE B — COMPANION
+
+1. Implement Pip dialogue.
+2. Implement contextual hints.
+3. Add helper behavior.
+4. Add story narration.
+5. Verify dialogue does not repeat incorrectly.
+
+STAGE C — STORY CAMPAIGN
+
+1. Create reusable level architecture.
+2. Preserve Sleeping Canopy.
+3. Create Moonlit Marsh.
+4. Create Hollow Below.
+5. Create Windward Ruins.
+6. Implement chapter selection and progression.
+7. Implement persistent save data.
+
+STAGE D — PROCEDURAL CHALLENGES
+
+1. Build segment library.
+2. Build generator.
+3. Build difficulty parameters.
+4. Build traversal validation.
+5. Add deterministic seeds.
+6. Add Wake Trials interface.
+
+STAGE E — ENVIRONMENT AND LIGHTING
+
+1. Expand upper canopy.
+2. Add foreground vegetation.
+3. Add ambient life.
+4. Implement dynamic 2D lighting.
+5. Add projected shadows.
+6. Add atmospheric light shafts.
+7. Add quality settings.
+
+STAGE F — MOBILE
+
+1. Implement unified input.
+2. Implement touch controls.
+3. Implement responsive HUD.
+4. Implement device orientation handling.
+5. Test phone and tablet layouts.
+
+STAGE G — OPEN SOURCE AND RELEASE DOCUMENTATION
+
+1. Update README.
+2. Add GitHub screenshots.
+3. Add contribution instructions.
+4. Add licences.
+5. Add issue templates.
+6. Clean metadata.
+7. Update asset manifest.
+
+STAGE H — FINAL VERIFICATION
+
+Run build, lint and tests.
+
+Test the actual running game.
+
+Do not claim a stage is complete merely because
+its files exist.
+
+If the complete scope cannot be safely completed in one
+execution, finish a stable sub-stage, document the remaining
+work and preserve the working implementation.
+
+Do not pretend incomplete stages are finished.
+
+============================================================
+16. ACCEPTANCE TESTS
+============================================================
+
+NIMA:
+
+- Running animation no longer contains duplicated anatomy.
+- Running cycle looks natural.
+- Idle and jump transitions work.
+- Character still matches the original concept.
+- Collision body aligns with feet.
+
+PIP:
+
+- Follows Nima.
+- Reacts to interesting objects.
+- Provides contextual guidance.
+- Narrates important story events.
+- Does not repeat dialogue incorrectly.
+- Does not obstruct gameplay.
+
+CHECKPOINTS:
+
+- Activation saves correctly.
+- Respawn position is supported by a real platform.
+- Player does not fall after respawning.
+- Physics state is reset.
+- Pip and camera return correctly.
+- Repeated deaths work.
+- Refresh preserves checkpoint progress.
+
+CAMPAIGN:
+
+- Four distinct levels are available.
+- Each has a unique environment.
+- Each is actually traversable.
+- Level progression works.
+- Chapter transitions work.
+- Checkpoints work independently.
+- Save progression persists.
+
+WAKE TRIALS:
+
+- All difficulty options work.
+- Layouts are deterministic by seed.
+- Generated routes are validated.
+- No impossible gaps.
+- Retry and completion work.
+
+ENVIRONMENT:
+
+- Upper canopy contains visible environmental life.
+- Foreground elements have depth.
+- Vegetation is not limited to platform surfaces.
+- Environmental animation remains smooth.
+- No unnecessary visual obstruction.
+
+LIGHTING:
+
+- Dynamic lighting is visible.
+- Shadows respond appropriately.
+- Wake produces localized lighting changes.
+- Fog and light shafts enhance depth.
+- Mobile quality settings reduce rendering cost.
+- Player visibility remains clear.
+
+MOBILE:
+
+- Touch movement works.
+- Jump and Wake work.
+- Simultaneous touch inputs work.
+- Pause works.
+- UI scales correctly.
+- No stuck buttons.
+- Browser scrolling does not interfere.
+
+OPEN SOURCE:
+
+- README exists.
+- Actual screenshots appear in README.
+- Installation instructions work.
+- Contribution instructions exist.
+- Source licence is present.
+- Asset licence boundaries are documented.
+- No secret keys are committed.
+- Asset manifest is current.
+
+TECHNICAL:
+
+- Production build succeeds.
+- TypeScript checks succeed.
+- No missing assets.
+- No browser runtime errors.
+- No major existing gameplay regressions.
+
+============================================================
+17. REQUIRED FINAL REPORT
+============================================================
+
+Report:
+
+1. Nima animation replacement and visual improvements.
+2. Pip's helper and narration behavior.
+3. Checkpoint and respawn fixes.
+4. Newly implemented campaign levels.
+5. Procedural challenge system.
+6. Upper environment improvements.
+7. Lighting and shadow implementation.
+8. Mobile input and interface.
+9. GitHub documentation and licensing.
+10. Metadata and dependency cleanup.
+11. Updated asset manifest.
+12. Build and test results.
+13. Known defects.
+14. Features still pending.
+
+Capture screenshots from the ACTUAL running game.
+
+Show each new level.
+
+Show the new Nima running animation.
+
+Show Pip's dialogue and helper behavior.
+
+Show the mobile touch interface.
+
+Show the lighting improvements.
+
+Show the README gallery rendering on GitHub.
+
+Do not use standalone AI concept images as proof
+of a completed game feature.
+
+============================================================
+FINAL CREATIVE DIRECTIVE
+============================================================
+
+Wispwake is evolving beyond a short platforming tutorial.
+
+It must become a coherent fantasy adventure with:
+
+- A memorable protagonist.
+- A meaningful companion.
+- An engaging story.
+- Distinct environments.
+- Interesting platforming.
+- Beautiful lighting.
+- Rich environmental life.
+- Reliable gameplay.
+- Accessible controls.
+- A community that can contribute to its development.
+
+Keep the original identity of the Veilgrove.
+
+Do not make the world visually noisy.
+
+Do not add complicated mechanics for their own sake.
+
+Prioritize quality, atmosphere, gameplay and storytelling.
+
+The world should feel like a place worth exploring.
+
+Nima should feel like a real illustrated character brought
+to life.
+
+Pip should feel like a genuine companion.
+
+Every level should offer a memorable journey.
+
+Every feature must work.
+
+QUALITY OF EXECUTION TAKES PRIORITY OVER FEATURE COUNT.

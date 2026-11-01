@@ -3,29 +3,30 @@ import { WakeInteractable } from '../systems/WakeSystem';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveManager } from '../systems/SaveManager';
 import { VEILGROVE_HEX } from '../config/palette';
+import { CampaignChapterId } from '../config/gameConfig';
 
 export type RootBridgeState = 'recessed' | 'extending' | 'extended';
 
-/**
- * RootBridge (Section 7.3 of the Visual Bible):
- * - Dormant state: Recessed, inactive coiled roots on the chasm edge.
- * - Activated result: Extends into a solid 236px walkable route across the gap.
- * - Persistence: Permanent once activated in the level (and persisted via SaveManager).
- */
 export class RootBridge implements WakeInteractable {
   public readonly id: string;
+  public readonly chapterId: CampaignChapterId | 'wake_trial';
   public readonly sprite: Phaser.Physics.Arcade.Sprite;
   public readonly body: Phaser.Physics.Arcade.Body;
-  private readonly scene: Phaser.Scene;
 
   public state: RootBridgeState = 'recessed';
 
-  constructor(scene: Phaser.Scene, id: string, x: number, y: number, initiallyExtended = false) {
-    this.scene = scene;
+  constructor(
+    scene: Phaser.Scene,
+    chapterId: CampaignChapterId | 'wake_trial',
+    id: string,
+    x: number,
+    y: number,
+    initiallyExtended = false
+  ) {
+    this.chapterId = chapterId;
     this.id = id;
     this.registerAnimations(scene);
 
-    // Anchor sprite at left root base (origin 0, 0.5) so it extends rightward across the gap
     this.sprite = scene.physics.add.sprite(x, y, 'root_bridge_sheet', 0);
     this.sprite.setOrigin(0, 0.5);
     this.sprite.setDepth(15);
@@ -34,7 +35,6 @@ export class RootBridge implements WakeInteractable {
     this.body.setAllowGravity(false);
     this.body.setImmovable(true);
 
-    // Full walkable bridge dimensions: 236px wide, 26px tall aligned with mossy top
     this.body.setSize(236, 26);
     this.body.setOffset(12, 26);
 
@@ -73,7 +73,6 @@ export class RootBridge implements WakeInteractable {
   }
 
   public getPosition(): { x: number; y: number } {
-    // Wake target point is the coiled root base on the left ledge
     return { x: this.sprite.x + 28, y: this.sprite.y };
   }
 
@@ -100,7 +99,10 @@ export class RootBridge implements WakeInteractable {
     this.sprite.setTint(0xffffff);
     this.body.enable = true;
     AudioManager.playRootExtend();
-    SaveManager.recordRootBridge(this.id);
+
+    if (this.chapterId !== 'wake_trial') {
+      SaveManager.recordRootBridge(this.chapterId, this.id);
+    }
 
     this.sprite.play('root_extending', true);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'root_extending', () => {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { activePhysicsTuning } from '../../config/physicsTuning';
 import { AudioManager } from '../../systems/AudioManager';
+import { InputManager, UnifiedInputState } from '../../systems/InputManager';
 
 export type PlayerAnimState =
   | 'idle'
@@ -12,21 +13,14 @@ export type PlayerAnimState =
   | 'wake_cast'
   | 'respawn';
 
-export interface PlayerIntent {
-  moveX: number;           // -1, 0, or 1
-  jumpJustPressed: boolean;
-  jumpHeld: boolean;
-  jumpJustReleased: boolean;
-  wakeJustPressed: boolean;
-}
-
 /**
- * Player entity and controller implementing Section 4.1, Section 6.1, and Section 6.2 of the Visual Bible:
- * - Smooth ground acceleration (1,920 u/s^2) and deceleration (2,120 u/s^2)
- * - Responsive air control (1,080 u/s^2)
- * - Variable jump height (holding jump vs releasing early damps upward velocity cleanly)
- * - Coyote time (0.10s) and jump input buffering (0.12s) working consistently across frame rates
- * - Trimmed body collision box (34x72) separate from cloak tip and seed glow
+ * Player entity and controller (Milestone 4 Update):
+ * - Uses `InputManager` to read combined Keyboard, Mobile Touch, and Gamepad inputs.
+ * - Calibrates safe spawn and respawn coordinates using `getSafeCenterYForPlatformTop(platformTopY)`
+ *   so Nima's physics body (`34x72`, offset Y `28` inside `96x112` sprite -> bottom at `y + 44`)
+ *   never overlaps inside a platform or falls through on respawn.
+ * - Uses `body.reset(safeX, safeY)` on respawn to clear all velocity, acceleration, and stale collision flags,
+ *   plus a brief `0.85s` respawn protection window (`isRespawnProtected`).
  */
 export class Player {
   public readonly sprite: Phaser.Physics.Arcade.Sprite;
@@ -39,22 +33,31 @@ export class Player {
   public isJumping = false;
   public wasGrounded = false;
   public animState: PlayerAnimState = 'idle';
+  public respawnProtectionTimer = 0;
 
   private landAnimTimer = 0;
   private wakeCastAnimTimer = 0;
   private respawnAnimTimer = 0;
   private footstepTimer = 0;
-  private prevJumpDown = false;
-  private prevWakeDown = false;
 
   // Keyboard references
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private keyA!: Phaser.Input.Keyboard.Key;
-  private keyD!: Phaser.Input.Keyboard.Key;
-  private keyZ!: Phaser.Input.Keyboard.Key;
-  private keySpace!: Phaser.Input.Keyboard.Key;
-  private keyE!: Phaser.Input.Keyboard.Key;
-  private keyX!: Phaser.Input.Keyboard.Key;
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private keyA?: Phaser.Input.Keyboard.Key;
+  private keyD?: Phaser.Input.Keyboard.Key;
+  private keyZ?: Phaser.Input.Keyboard.Key;
+  private keySpace?: Phaser.Input.Keyboard.Key;
+  private keyE?: Phaser.Input.Keyboard.Key;
+  private keyX?: Phaser.Input.Keyboard.Key;
+
+  /**
+   * Computes the exact sprite center Y so Nima's physics body bottom (`sprite.y + 44`)
+   * rests safely `marginPx` above `platformTopY`.
+   */
+  public static getSafeCenterYForPlatformTop(platformTopY: number, marginPx = 4): number {
+    // Frame height = 112 (origin 0.5 -> top is sprite.y - 56).
+    // Feet & hitbox bottom are at frame y = 100 -> sprite.y - 56 + 100 = sprite.y + 44.
+    return platformTopY - 44 - marginPx;
+  }
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -64,8 +67,8 @@ export class Player {
     this.sprite.setDepth(20);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
 
-    // Align collision bounds strictly to Nima's body (34x72 inside 96x112 frame, feet at y = 100)
     this.syncHitbox();
+    this.body.setGravityY(activePhysicsTuning.gravity);
     this.body.setMaxVelocity(activePhysicsTuning.moveSpeed * 1.5, activePhysicsTuning.maxFallSpeed);
     this.body.setCollideWorldBounds(false);
 
@@ -153,32 +156,19 @@ export class Player {
     });
   }
 
-  public readIntent(): PlayerIntent {
-    const leftDown = Boolean(this.cursors?.left?.isDown || this.keyA?.isDown);
-    const rightDown = Boolean(this.cursors?.right?.isDown || this.keyD?.isDown);
-    const jumpDown = Boolean(this.cursors?.up?.isDown || this.keySpace?.isDown || this.keyZ?.isDown);
-    const wakeDown = Boolean(this.keyE?.isDown || this.keyX?.isDown);
-
-    const moveX = (rightDown ? 1 : 0) - (leftDown ? 1 : 0);
-    const jumpJustPressed = jumpDown && !this.prevJumpDown;
-    const jumpJustReleased = !jumpDown && this.prevJumpDown;
-    const wakeJustPressed = wakeDown && !this.prevWakeDown;
-
-    this.prevJumpDown = jumpDown;
-    this.prevWakeDown = wakeDown;
-
-    return {
-      moveX,
-      jumpJustPressed,
-      jumpHeld: jumpDown,
-      jumpJustReleased,
-      wakeJustPressed,
-    };
+  public readIntent(): UnifiedInputState {
+    return InputManager.sampleFrame(this.cursors, {
+      keyA: this.keyA,
+      keyD: this.keyD,
+      keyZ: this.keyZ,
+      keySpace: this.keySpace,
+      keyE: this.keyE,
+      keyX: this.keyX,
+    });
   }
 
   public clearInputs(): void {
-    this.prevJumpDown = false;
-    this.prevWakeDown = false;
+    InputManager.clearAll();
   }
 
   public triggerWakeAnimation(): void {
@@ -187,13 +177,31 @@ export class Player {
     this.animState = 'wake_cast';
   }
 
-  public respawnAt(x: number, y: number): void {
-    this.sprite.setPosition(x, y);
+  public isRespawnProtected(): boolean {
+    return this.respawnProtectionTimer > 0;
+  }
+
+  /**
+   * Reliable Physics Respawn (Section 04):
+   * - Synchronizes sprite & Arcade Physics body via `body.reset(safeX, safeY)`.
+   * - Clears velocity, acceleration, jump state, coyote/buffer timers, and input history.
+   * - Grants 0.85s respawn protection so hazards cannot re-trigger during respawn.
+   */
+  public respawnAt(safeX: number, safeY: number): void {
+    this.syncHitbox();
+    this.body.reset(safeX, safeY);
     this.body.setVelocity(0, 0);
-    this.coyoteTimer = 0;
+    this.body.setAcceleration(0, 0);
+    this.body.setGravityY(activePhysicsTuning.gravity);
+
+    this.coyoteTimer = activePhysicsTuning.coyoteTime;
     this.jumpBufferTimer = 0;
     this.isJumping = false;
+    this.wasGrounded = true;
+    this.respawnProtectionTimer = 0.85;
     this.respawnAnimTimer = 0.35;
+
+    this.clearInputs();
     this.sprite.play('nima_respawn', true);
     this.animState = 'respawn';
   }
@@ -203,10 +211,13 @@ export class Player {
     this.body.setGravityY(tuning.gravity);
     this.body.setMaxVelocity(tuning.moveSpeed * 1.6, tuning.maxFallSpeed);
 
-    const intent = this.readIntent();
-    const grounded = this.body.blocked.down || this.body.touching.down;
+    if (this.respawnProtectionTimer > 0) {
+      this.respawnProtectionTimer = Math.max(0, this.respawnProtectionTimer - dt);
+    }
 
-    // Detect landing transition
+    const intent = this.readIntent();
+    const grounded = Boolean(this.body.blocked.down || this.body.touching.down);
+
     if (grounded && !this.wasGrounded && this.body.velocity.y >= 0) {
       this.isJumping = false;
       this.landAnimTimer = 0.16;
@@ -214,21 +225,18 @@ export class Player {
       onLandDust(this.sprite.x, this.body.bottom);
     }
 
-    // 1. Coyote Time management
     if (grounded) {
       this.coyoteTimer = tuning.coyoteTime;
     } else {
       this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
     }
 
-    // 2. Jump Input Buffering
     if (intent.jumpJustPressed) {
       this.jumpBufferTimer = tuning.jumpBufferTime;
     } else {
       this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
     }
 
-    // 3. Horizontal Acceleration & Deceleration (Section 6.1)
     let vx = this.body.velocity.x;
     const targetSpeed = intent.moveX * tuning.moveSpeed;
 
@@ -237,7 +245,6 @@ export class Player {
       this.sprite.setFlipX(this.facing < 0);
 
       const accel = grounded ? tuning.groundAcceleration : tuning.airAcceleration;
-      // If reversing direction on ground, apply snappy turn-around acceleration
       const turnMultiplier = grounded && Math.sign(vx) !== 0 && Math.sign(vx) !== intent.moveX ? 1.35 : 1.0;
       const step = accel * turnMultiplier * dt;
 
@@ -247,7 +254,6 @@ export class Player {
         vx = Math.max(targetSpeed, vx - step);
       }
 
-      // Gentle footstep audio while running on ground
       if (grounded) {
         this.footstepTimer -= dt;
         if (this.footstepTimer <= 0) {
@@ -268,7 +274,6 @@ export class Player {
 
     this.body.setVelocityX(vx);
 
-    // 4. Jump Execution (Consumes Coyote Time + Jump Buffer)
     if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0 && !this.isJumping) {
       this.body.setVelocityY(tuning.jumpVelocity);
       this.isJumping = true;
@@ -278,22 +283,18 @@ export class Player {
       onLandDust(this.sprite.x, this.body.bottom);
     }
 
-    // 5. Variable Jump Height (Section 6.2: Releasing jump reduces upward motion smoothly without sudden snap)
     if (intent.jumpJustReleased && this.body.velocity.y < 0) {
       this.body.setVelocityY(this.body.velocity.y * tuning.jumpCutMultiplier);
     }
 
-    // Clamp max fall speed explicitly
     if (this.body.velocity.y > tuning.maxFallSpeed) {
       this.body.setVelocityY(tuning.maxFallSpeed);
     }
 
-    // 6. Wake Pulse Trigger (Grounded or Airborne per Section 7.2)
     if (intent.wakeJustPressed) {
       onWakeRequested();
     }
 
-    // 7. Update Animation State Machine (Section 10.1: Animation never delays input response)
     this.updateAnimationState(dt, grounded, vx, this.body.velocity.y);
     this.wasGrounded = grounded;
   }
@@ -312,7 +313,7 @@ export class Player {
     if (this.landAnimTimer > 0) {
       this.landAnimTimer -= dt;
       if (Math.abs(vx) > 35 && grounded) {
-        this.landAnimTimer = 0; // Cancel land recovery immediately if running
+        this.landAnimTimer = 0;
       } else {
         if (this.animState !== 'land') {
           this.animState = 'land';

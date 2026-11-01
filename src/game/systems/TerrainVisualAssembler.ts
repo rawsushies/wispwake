@@ -1,44 +1,39 @@
 import Phaser from 'phaser';
-import { PlatformSpec } from '../levels/sleepingCanopy/levelData';
+import { BiomeTheme, PlatformSpec } from '../levels/sleepingCanopy/levelData';
 
 /**
- * TerrainVisualAssembler — Milestone 3 Organic Terrain & Platform Redesign (Section 09).
+ * TerrainVisualAssembler — Milestone 3 & 4 Multi-Biome Organic Terrain & Platform Redesign.
  *
  * Replaces uniform geometric rectangle platforms with multi-layered, hand-painted organic
- * Veilgrove formations while keeping the physics collision box 100% separate and readable:
- * 1. Ancient Root Formations: Knotted bark strata, uneven moss-draped top ridges, hanging root tendrils
- *    extending below the platform body, shelf fungi, and small surface ferns.
- * 2. Mossy Stone Outcrops: Irregular layered slate/forest stone slabs with glowing crevices, moss cushions,
- *    and trailing ivy vines.
- * 3. Organic Ember Coral Thorn Clusters: Irregular gnarled bramble roots with pulsing warning buds and
- *    curved crimson-coral thorns growing naturally out of the forest floor.
+ * Veilgrove formations tailored to each chapter's biome (`canopy`, `marsh`, `cavern`, `ruins`)
+ * while keeping the physics collision box 100% separate and readable:
+ * 1. Ancient Root Formations (`canopy`): Knotted bark strata, uneven moss-draped top ridges, hanging root tendrils.
+ * 2. Moonlit Marsh Terraces (`marsh`): Sunken stone arches, wet reflective slate, glowing cattail reeds, and water-lily pads.
+ * 3. Hollow Below Caverns (`cavern`): Giant subterranean root ribs, bioluminescent purple/mint shelf fungi, and hanging root stalactites.
+ * 4. Windward Ruins (`ruins`): Weathered sky-temple stone blocks, carved relief arches, golden sun-lichen, and wind-swept grasses.
  */
 export class TerrainVisualAssembler {
-  /**
-   * Renders a rich, multi-layered organic terrain sprite that visually extends beyond the raw
-   * collision box (hanging roots below, moss tufts and ferns on top/sides) while maintaining a
-   * crystal-clear walkable top surface at `padTop`.
-   */
   public static createOrganicPlatformVisual(
     scene: Phaser.Scene,
     spec: PlatformSpec,
     index: number,
-    restored = false
+    restored = false,
+    biome: BiomeTheme = 'canopy'
   ): Phaser.GameObjects.Image {
     const padX = 24;
     const padTop = 16;
-    const padBottom = 46; // Space for hanging roots and trailing vines below the collision bottom
+    const padBottom = 46;
 
     const texW = spec.width + padX * 2;
     const texH = spec.height + padTop + padBottom;
     const style = index % 3 === 1 ? 'stone_root' : 'ancient_root';
-    const texKey = `org_plat_${spec.id}_${style}_${restored ? 'warm' : 'cool'}`;
+    const texKey = `org_plat_${biome}_${spec.id}_${style}_${restored ? 'warm' : 'cool'}`;
 
     if (!scene.textures.exists(texKey)) {
       const canvasTex = scene.textures.createCanvas(texKey, texW, texH);
       if (canvasTex) {
         const ctx = canvasTex.getContext();
-        this.paintOrganicPlatform(ctx, spec.width, spec.height, padX, padTop, style, index, restored);
+        this.paintOrganicPlatform(ctx, spec.width, spec.height, padX, padTop, style, index, restored, biome);
         canvasTex.refresh();
       }
     }
@@ -57,15 +52,15 @@ export class TerrainVisualAssembler {
     oy: number,
     style: 'ancient_root' | 'stone_root',
     seed: number,
-    restored: boolean
+    restored: boolean,
+    biome: BiomeTheme
   ): void {
-    // Deterministic pseudo-random helper per platform
     const rand = (n: number) => {
       const x = Math.sin(seed * 97.13 + n * 43.7) * 10000;
       return x - Math.floor(x);
     };
 
-    // 1. HANGING ROOTS & TRAILING VINES BENEATH PLATFORM (extends into padBottom)
+    // 1. HANGING ROOTS, MARSH REED ROOTS, OR CAVERN TENDRILS BENEATH PLATFORM
     const rootCount = Math.max(4, Math.floor(w / 52));
     for (let i = 0; i < rootCount; i++) {
       const rx = ox + 22 + (i + 0.35) * ((w - 44) / rootCount) + (rand(i) - 0.5) * 18;
@@ -73,7 +68,14 @@ export class TerrainVisualAssembler {
       const hangLen = 20 + rand(i + 20) * 38;
       const curve = (rand(i + 40) - 0.5) * 26;
 
-      ctx.strokeStyle = i % 2 === 0 ? '#19283A' : '#243B3E';
+      ctx.strokeStyle =
+        biome === 'cavern'
+          ? '#231D3A'
+          : biome === 'ruins'
+          ? '#2D3A4A'
+          : i % 2 === 0
+          ? '#19283A'
+          : '#243B3E';
       ctx.lineWidth = 3.5 + rand(i + 10) * 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -81,7 +83,6 @@ export class TerrainVisualAssembler {
       ctx.quadraticCurveTo(rx + curve, startY + hangLen * 0.55, rx - curve * 0.4, startY + hangLen);
       ctx.stroke();
 
-      // Secondary rootlet fork
       if (rand(i + 60) > 0.4) {
         ctx.lineWidth = 1.8;
         ctx.beginPath();
@@ -90,11 +91,14 @@ export class TerrainVisualAssembler {
         ctx.stroke();
       }
 
-      // Tiny bioluminescent spore droplet at root tip when restored or on select roots
-      if (restored || rand(i + 80) > 0.65) {
-        ctx.fillStyle = restored ? 'rgba(241, 200, 120, 0.75)' : 'rgba(143, 231, 199, 0.55)';
+      if (restored || rand(i + 80) > 0.55) {
+        ctx.fillStyle = restored
+          ? 'rgba(241, 200, 120, 0.8)'
+          : biome === 'cavern'
+          ? 'rgba(183, 162, 232, 0.72)'
+          : 'rgba(143, 231, 199, 0.6)';
         ctx.beginPath();
-        ctx.arc(rx - curve * 0.4, startY + hangLen, 2.3, 0, Math.PI * 2);
+        ctx.arc(rx - curve * 0.4, startY + hangLen, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -102,7 +106,6 @@ export class TerrainVisualAssembler {
     // 2. MAIN IRREGULAR BARK OR LAYERED STONE BODY
     ctx.save();
     ctx.beginPath();
-    // Top edge follows walkable surface closely (y = oy)
     ctx.moveTo(ox + 8, oy + 4);
     for (let x = 24; x < w - 16; x += 28) {
       const bump = (rand(x) - 0.5) * 3.5;
@@ -110,7 +113,6 @@ export class TerrainVisualAssembler {
     }
     ctx.lineTo(ox + w - 8, oy + 5);
 
-    // Right irregular side with protruding root knots or rock ledges
     ctx.bezierCurveTo(
       ox + w + 10,
       oy + h * 0.28,
@@ -120,7 +122,6 @@ export class TerrainVisualAssembler {
       oy + h - 8
     );
 
-    // Bottom irregular arched underside (natural root bridge/cavern arch silhouette)
     const bottomSegments = Math.max(4, Math.floor(w / 68));
     for (let s = bottomSegments - 1; s >= 0; s--) {
       const sx = ox + (s / bottomSegments) * w;
@@ -129,12 +130,23 @@ export class TerrainVisualAssembler {
       ctx.quadraticCurveTo(midX, oy + h - archDepth, sx + 10, oy + h - 4 + (rand(s) - 0.5) * 8);
     }
 
-    // Left irregular side
     ctx.bezierCurveTo(ox - 10, oy + h * 0.65, ox + 12, oy + h * 0.3, ox + 8, oy + 4);
     ctx.closePath();
 
     const bodyGrad = ctx.createLinearGradient(0, oy, 0, oy + h);
-    if (style === 'stone_root') {
+    if (biome === 'marsh') {
+      bodyGrad.addColorStop(0, '#274E54');
+      bodyGrad.addColorStop(0.5, '#193542');
+      bodyGrad.addColorStop(1, '#0F1D2C');
+    } else if (biome === 'cavern') {
+      bodyGrad.addColorStop(0, '#32294E');
+      bodyGrad.addColorStop(0.5, '#201B38');
+      bodyGrad.addColorStop(1, '#110F22');
+    } else if (biome === 'ruins') {
+      bodyGrad.addColorStop(0, '#445566');
+      bodyGrad.addColorStop(0.5, '#2B3A4D');
+      bodyGrad.addColorStop(1, '#172233');
+    } else if (style === 'stone_root') {
       bodyGrad.addColorStop(0, '#334C54');
       bodyGrad.addColorStop(0.45, '#1F3142');
       bodyGrad.addColorStop(1, '#121B2B');
@@ -146,11 +158,9 @@ export class TerrainVisualAssembler {
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
-    // Clip to body for internal strata, twisting root tendons, and rock fissures
     ctx.clip();
 
-    if (style === 'stone_root') {
-      // Irregular stone blocks & glowing moss crevices
+    if (style === 'stone_root' || biome === 'ruins') {
       ctx.strokeStyle = '#121B2B';
       ctx.lineWidth = 2.5;
       for (let y = oy + 26; y < oy + h - 12; y += 32) {
@@ -161,8 +171,7 @@ export class TerrainVisualAssembler {
         }
         ctx.stroke();
       }
-      // Wrapping root bands around the stone
-      ctx.strokeStyle = '#253D3B';
+      ctx.strokeStyle = biome === 'ruins' ? '#586A78' : '#253D3B';
       ctx.lineWidth = 10;
       for (let i = 0; i < 3; i++) {
         const rx = ox + w * (0.2 + i * 0.3);
@@ -172,10 +181,14 @@ export class TerrainVisualAssembler {
         ctx.stroke();
       }
     } else {
-      // Intertwined ancient root tendons & bark grain
       for (let r = 0; r < 6; r++) {
         const yOff = oy + 18 + r * (h / 6);
-        ctx.strokeStyle = r % 2 === 0 ? 'rgba(56, 88, 78, 0.55)' : 'rgba(18, 27, 43, 0.65)';
+        ctx.strokeStyle =
+          r % 2 === 0
+            ? biome === 'cavern'
+              ? 'rgba(92, 74, 138, 0.45)'
+              : 'rgba(56, 88, 78, 0.55)'
+            : 'rgba(18, 27, 43, 0.65)';
         ctx.lineWidth = 6 + (r % 3) * 3;
         ctx.beginPath();
         ctx.moveTo(ox - 10, yOff);
@@ -194,10 +207,10 @@ export class TerrainVisualAssembler {
     ctx.restore();
 
     // 3. SIDE SHELF MUSHROOMS / POLYPORE FUNGI ON BARK EDGES
-    for (let side of [-1, 1]) {
+    for (const side of [-1, 1]) {
       const mx = side < 0 ? ox + 6 : ox + w - 6;
       const my = oy + 28 + rand(side + 50) * Math.min(45, h * 0.4);
-      ctx.fillStyle = restored ? '#F1C878' : '#8FE7C7';
+      ctx.fillStyle = restored ? '#F1C878' : biome === 'cavern' ? '#B7A2E8' : '#8FE7C7';
       ctx.strokeStyle = '#121B2B';
       ctx.lineWidth = 1.4;
       ctx.beginPath();
@@ -212,13 +225,12 @@ export class TerrainVisualAssembler {
     }
 
     // 4. LUSH UNEVEN MOSS MANTLE & SMALL SURFACE PLANTS ALONG WALKABLE TOP
-    // Small decorative blades of grass, fern fronds, and tiny buds sprouting above y = oy
     const tuftCount = Math.max(5, Math.floor(w / 38));
     for (let t = 0; t < tuftCount; t++) {
       const tx = ox + 18 + t * ((w - 36) / tuftCount) + (rand(t + 200) - 0.5) * 12;
       const ty = oy + 2;
 
-      ctx.strokeStyle = restored ? '#98B87A' : '#78906A';
+      ctx.strokeStyle = restored ? '#98B87A' : biome === 'cavern' ? '#70889E' : '#78906A';
       ctx.lineWidth = 2;
       for (let b = -1; b <= 1; b++) {
         ctx.beginPath();
@@ -227,21 +239,31 @@ export class TerrainVisualAssembler {
         ctx.stroke();
       }
 
-      // Occasional tiny sleeping/awakened clover bud
       if (t % 3 === 0) {
-        ctx.fillStyle = restored ? '#F1C878' : '#8FE7C7';
+        ctx.fillStyle = restored ? '#F1C878' : biome === 'cavern' ? '#B7A2E8' : '#8FE7C7';
         ctx.beginPath();
         ctx.arc(tx, ty - 11, 2.2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Main Draped Moss Cushion (Uneven lobed bottom edge, crisp readable walkable top edge at y = oy)
     const mossGrad = ctx.createLinearGradient(0, oy - 3, 0, oy + 26);
     if (restored) {
       mossGrad.addColorStop(0, '#B4CF8E');
       mossGrad.addColorStop(0.5, '#78906A');
       mossGrad.addColorStop(1, '#4A6B53');
+    } else if (biome === 'marsh') {
+      mossGrad.addColorStop(0, '#6EB8A8');
+      mossGrad.addColorStop(0.55, '#3E7A74');
+      mossGrad.addColorStop(1, '#1E464A');
+    } else if (biome === 'cavern') {
+      mossGrad.addColorStop(0, '#7B74B8');
+      mossGrad.addColorStop(0.55, '#4A487A');
+      mossGrad.addColorStop(1, '#29284D');
+    } else if (biome === 'ruins') {
+      mossGrad.addColorStop(0, '#B5B884');
+      mossGrad.addColorStop(0.55, '#6D7E62');
+      mossGrad.addColorStop(1, '#3B4D47');
     } else {
       mossGrad.addColorStop(0, '#89A477');
       mossGrad.addColorStop(0.55, '#57725B');
@@ -253,18 +275,15 @@ export class TerrainVisualAssembler {
     ctx.lineWidth = 1.8;
 
     ctx.beginPath();
-    // Overhanging left moss lip
     ctx.moveTo(ox - 4, oy + 12);
     ctx.quadraticCurveTo(ox - 2, oy, ox + 10, oy);
 
-    // Walkable top ridge with subtle organic undulation (+/- 1.5px so collision remains 100% honest)
     for (let x = 20; x < w - 16; x += 22) {
       ctx.lineTo(ox + x, oy + Math.sin(x * 0.08 + seed) * 1.4);
     }
     ctx.lineTo(ox + w - 10, oy);
     ctx.quadraticCurveTo(ox + w + 2, oy, ox + w + 4, oy + 12);
 
-    // Uneven scalloped moss lobes hanging down over the bark face
     const lobeWidth = 26;
     for (let x = w; x >= 0; x -= lobeWidth) {
       const lobeDrop = 14 + rand(x + 300) * 14;
@@ -275,8 +294,8 @@ export class TerrainVisualAssembler {
     ctx.stroke();
 
     // 5. Walkable Top Rim Light (Ensures instant platform readability in every lighting state per Section 9.6)
-    ctx.strokeStyle = restored ? 'rgba(241, 200, 120, 0.85)' : 'rgba(167, 184, 174, 0.78)';
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = restored ? 'rgba(241, 200, 120, 0.88)' : 'rgba(182, 212, 200, 0.82)';
+    ctx.lineWidth = 2.3;
     ctx.beginPath();
     ctx.moveTo(ox + 10, oy + 1.5);
     for (let x = 20; x <= w - 12; x += 22) {
@@ -285,10 +304,6 @@ export class TerrainVisualAssembler {
     ctx.stroke();
   }
 
-  /**
-   * Builds an organic, gnarled Ember Coral (`#E98372`) thorn bramble formation texture
-   * with twisted root coils, glowing warning pods, and sharp curved thorns.
-   */
   public static buildOrganicHazardTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists('hazard_bramble')) {
       scene.textures.remove('hazard_bramble');
@@ -300,14 +315,12 @@ export class TerrainVisualAssembler {
     if (!brambleTex) return;
     const ctx = brambleTex.getContext();
 
-    // 1. Subtle Ember Coral warning aura
     const glow = ctx.createRadialGradient(bw * 0.5, bh - 12, 8, bw * 0.5, bh - 18, 64);
     glow.addColorStop(0, 'rgba(233, 131, 114, 0.42)');
     glow.addColorStop(1, 'rgba(233, 131, 114, 0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, bw, bh);
 
-    // 2. Gnarled dark root base entangled with soil
     ctx.strokeStyle = '#1D2D43';
     ctx.lineWidth = 7;
     ctx.lineCap = 'round';
@@ -316,7 +329,6 @@ export class TerrainVisualAssembler {
     ctx.bezierCurveTo(bw * 0.3, bh - 22, bw * 0.7, bh - 22, bw - 8, bh - 6);
     ctx.stroke();
 
-    //Twisting crimson-stained vine coils
     ctx.strokeStyle = '#5E2B2A';
     ctx.lineWidth = 4.5;
     ctx.beginPath();
@@ -326,7 +338,6 @@ export class TerrainVisualAssembler {
     }
     ctx.stroke();
 
-    // 3. Irregular organic thorn spires & glowing Ember Coral warning buds
     const spirePositions = [18, 34, 52, 68, 84, 102, 118];
     spirePositions.forEach((x, idx) => {
       const lean = (idx % 2 === 0 ? -1 : 1) * (4 + (idx % 3) * 2);
@@ -349,7 +360,6 @@ export class TerrainVisualAssembler {
       ctx.fill();
       ctx.stroke();
 
-      // Bioluminescent Ember Coral warning pod at the base of every second spire
       if (idx % 2 === 0) {
         ctx.fillStyle = '#E98372';
         ctx.beginPath();
