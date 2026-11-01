@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { BiomeTheme } from '../levels/sleepingCanopy/levelData';
-import { PlatformSpec } from '../levels/sleepingCanopy/levelData';
+import { BiomeTheme, PlatformSpec } from '../levels/sleepingCanopy/levelData';
 import { SaveManager } from './SaveManager';
 
 export interface DynamicLightSource {
@@ -21,15 +20,14 @@ interface TransientPulseLight {
 }
 
 /**
- * LightingSystem — Milestone 4 (Section 07: Hybrid Dynamic 2D / 2.5D Lighting System).
+ * LightingSystem — Milestone 5 Hybrid Dynamic 2D / 2.5D Lighting System (Section 03 & 20).
  *
- * Implements:
- * 1. Soft 2D Projected Drop Shadows cast by platforms and canopy structures onto the forest depths.
- * 2. Depth-aware Biome Gloom & Dynamic Lightmap (rendered via a real-time MULTIPLY canvas lightmap
- *    that carves warm Sap Gold & cool Wake Mint illumination around Nima's seed, Pip, Wake pulses,
- *    awakened BloomPlatforms, Checkpoints, and Ancient Blooms while keeping platform top edges readable).
- * 3. Normal-style Directional Rim Specular Highlights on nearby terrain and foliage when light sources approach.
- * 4. Quality Scaling (`auto`, `high`, `balanced`, `low`) so both desktop and mobile maintain 60 FPS.
+ * Fixes & Improvements:
+ * 1. Overscanned High-Resolution Lightmap (`512x288` covering `-32..-32` to `992..572`):
+ *    Prevents camera shake or sub-pixel scroll from ever exposing a rectangular border around the viewport.
+ * 2. Smooth 4-Stop Radial Falloff: Every light source and transient Wake pulse reaches 0.0 alpha smoothly
+ *    along a circular radial gradient with zero square texture artifacts or double-brightening.
+ * 3. Soft 2D Projected Drop Shadows & Normal-Style Directional Rim Highlights.
  */
 export class LightingSystem {
   private readonly scene: Phaser.Scene;
@@ -42,8 +40,11 @@ export class LightingSystem {
   private lightmapCanvas!: Phaser.Textures.CanvasTexture;
   private lightmapImage!: Phaser.GameObjects.Image;
 
-  private readonly mapWidth = 320;
-  private readonly mapHeight = 180;
+  private readonly overscanPx = 32;
+  private readonly viewWidth = 960 + 64;
+  private readonly viewHeight = 540 + 64;
+  private readonly mapWidth = 512;
+  private readonly mapHeight = 288;
 
   private transientPulses: TransientPulseLight[] = [];
   private platforms: PlatformSpec[] = [];
@@ -65,15 +66,11 @@ export class LightingSystem {
     this.createDynamicLightmapOverlay();
   }
 
-  /**
-   * 1. Casts soft 2D directional shadows beneath platforms and root arches onto midground/near layers.
-   */
   private createProjectedPlatformShadows(): void {
     this.shadowGraphics = this.scene.add.graphics();
-    this.shadowGraphics.setDepth(11.8); // Just behind static platform visuals (12.5)
+    this.shadowGraphics.setDepth(11.8);
 
     for (const plat of this.platforms) {
-      // Soft multi-pass directional shadow cast diagonally down-right from upper twilight moon/sun
       for (let pass = 0; pass < 3; pass++) {
         const offset = (pass + 1) * 9;
         const alpha = 0.22 - pass * 0.055;
@@ -88,15 +85,11 @@ export class LightingSystem {
       }
     }
 
-    // Dynamic normal-map-style rim highlight graphics drawn above terrain (depth 13.8)
     this.rimLightGraphics = this.scene.add.graphics();
     this.rimLightGraphics.setDepth(13.8);
     this.rimLightGraphics.setBlendMode(Phaser.BlendModes.ADD);
   }
 
-  /**
-   * 2. Creates the real-time MULTIPLY darkness & localized lightmap overlay (`960x540` viewport).
-   */
   private createDynamicLightmapOverlay(): void {
     if (this.scene.textures.exists(this.lightmapKey)) {
       this.scene.textures.remove(this.lightmapKey);
@@ -107,12 +100,12 @@ export class LightingSystem {
       this.lightmapCanvas = tex;
     }
 
-    this.lightmapImage = this.scene.add.image(0, 0, this.lightmapKey);
+    this.lightmapImage = this.scene.add.image(-this.overscanPx, -this.overscanPx, this.lightmapKey);
     this.lightmapImage
       .setOrigin(0, 0)
       .setScrollFactor(0)
-      .setScale(960 / this.mapWidth, 540 / this.mapHeight)
-      .setDepth(28.5) // Above gameplay plane & atmosphere, below foreground frame (30) and UI
+      .setScale(this.viewWidth / this.mapWidth, this.viewHeight / this.mapHeight)
+      .setDepth(28.5)
       .setBlendMode(Phaser.BlendModes.MULTIPLY);
   }
 
@@ -120,10 +113,10 @@ export class LightingSystem {
     this.transientPulses.push({
       x,
       y,
-      radius: 28,
-      maxRadius: maxRadius * 1.45,
+      radius: 36,
+      maxRadius: maxRadius * 1.35,
       elapsed: 0,
-      duration: 0.72,
+      duration: 0.65,
     });
   }
 
@@ -143,12 +136,11 @@ export class LightingSystem {
   ): void {
     this.frameCounter++;
 
-    // Update expanding Wake light pulses
     for (let i = this.transientPulses.length - 1; i >= 0; i--) {
       const p = this.transientPulses[i];
       p.elapsed += dt;
       const t = Phaser.Math.Clamp(p.elapsed / p.duration, 0, 1);
-      p.radius = Phaser.Math.Linear(28, p.maxRadius, 1 - Math.pow(1 - t, 3));
+      p.radius = Phaser.Math.Linear(36, p.maxRadius, 1 - Math.pow(1 - t, 3));
       if (p.elapsed >= p.duration) {
         this.transientPulses.splice(i, 1);
       }
@@ -163,7 +155,6 @@ export class LightingSystem {
 
     this.lightmapImage.setVisible(true);
 
-    // In 'balanced' mode, update the offscreen lightmap every 2nd frame for extra mobile headroom
     if (qualitySetting === 'balanced' && this.frameCounter % 2 !== 0) {
       return;
     }
@@ -183,38 +174,38 @@ export class LightingSystem {
   ): void {
     if (!this.lightmapCanvas) return;
     const ctx = this.lightmapCanvas.getContext();
-    const sx = this.mapWidth / 960;
-    const sy = this.mapHeight / 540;
+    const sx = this.mapWidth / this.viewWidth;
+    const sy = this.mapHeight / this.viewHeight;
 
-    // 1. Base ambient darkness color per biome (lighter when chapter is restored so platform edges are always clear)
-    let ambientColor = '#7C93AA'; // Default canopy twilight
+    let ambientColor = '#7C93AA';
     if (this.isChapterRestored) {
       ambientColor = '#D8CEBA';
     } else if (this.biome === 'marsh') {
-      ambientColor = '#6E8BA4';
+      ambientColor = '#6B88A2';
     } else if (this.biome === 'cavern') {
-      ambientColor = '#5E6E8C'; // Deeper underground gloom in Hollow Below
+      ambientColor = '#586888';
     } else if (this.biome === 'ruins') {
-      ambientColor = '#8BA0B8'; // High-altitude moonlit sky
+      ambientColor = '#889EB6';
     }
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = ambientColor;
     ctx.fillRect(0, 0, this.mapWidth, this.mapHeight);
 
-    // 2. Additive light passes (`lighter` / `screen` on the multiply texture turns darkness toward white/tinted glow)
     ctx.globalCompositeOperation = 'lighter';
 
     const drawLight = (wx: number, wy: number, radiusPx: number, rgb: string, intensity: number) => {
-      const lx = (wx - camX) * sx;
-      const ly = (wy - camY) * sy;
+      const lx = (wx - camX + this.overscanPx) * sx;
+      const ly = (wy - camY + this.overscanPx) * sy;
       const r = radiusPx * sx;
-      if (lx + r < -20 || lx - r > this.mapWidth + 20 || ly + r < -20 || ly - r > this.mapHeight + 20) {
+      if (lx + r < -10 || lx - r > this.mapWidth + 10 || ly + r < -10 || ly - r > this.mapHeight + 10) {
         return;
       }
-      const grad = ctx.createRadialGradient(lx, ly, r * 0.06, lx, ly, r);
-      grad.addColorStop(0, `rgba(${rgb}, ${Math.min(1, intensity)})`);
-      grad.addColorStop(0.5, `rgba(${rgb}, ${Math.min(1, intensity * 0.48)})`);
+      const grad = ctx.createRadialGradient(lx, ly, r * 0.04, lx, ly, r);
+      const a0 = Math.min(1, intensity);
+      grad.addColorStop(0, `rgba(${rgb}, ${a0.toFixed(3)})`);
+      grad.addColorStop(0.38, `rgba(${rgb}, ${(a0 * 0.56).toFixed(3)})`);
+      grad.addColorStop(0.72, `rgba(${rgb}, ${(a0 * 0.18).toFixed(3)})`);
       grad.addColorStop(1, `rgba(${rgb}, 0)`);
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -222,30 +213,26 @@ export class LightingSystem {
       ctx.fill();
     };
 
-    // Nima's warm seed light (always illuminates Nima and nearby platform edges)
+    // Nima's warm living seed illumination
     drawLight(nimaX, nimaY - 8, 195, '241, 200, 120', 0.85);
 
-    // Pip's bioluminescent Wake Mint / Spirit Lilac lantern aura
+    // Pip's cool Wake Mint illumination
     drawLight(pipX, pipY, 155, '143, 231, 199', 0.78);
 
-    // World lights (Checkpoints, Awakened Blooms, Root Bridges, Ancient Bloom, Bioluminescent Flora)
+    // World lights (Checkpoints, Awakened Blooms, Root Bridges, Ancient Bloom)
     for (const light of worldLights) {
       drawLight(light.x, light.y, light.radius, light.colorHex, light.intensity);
     }
 
-    // Transient Wake Pulse bursts
+    // Transient Wake Pulse bursts (smooth circular falloff, no square boundaries)
     for (const pulse of this.transientPulses) {
-      const fade = 1 - pulse.elapsed / pulse.duration;
-      drawLight(pulse.x, pulse.y, pulse.radius, '143, 231, 199', 0.95 * fade);
+      const fade = Math.pow(1 - pulse.elapsed / pulse.duration, 1.4);
+      drawLight(pulse.x, pulse.y, pulse.radius, '143, 231, 199', 0.72 * fade);
     }
 
     this.lightmapCanvas.refresh();
   }
 
-  /**
-   * 3. Normal-style directional rim highlights along the top/side surfaces of nearby platforms
-   *    reactive to Nima's seed, Pip, and active Wake pulses (2.5D surface normal response).
-   */
   private renderNormalRimHighlights(
     camX: number,
     nimaX: number,
@@ -276,11 +263,9 @@ export class LightingSystem {
     }
 
     for (const plat of this.platforms) {
-      // Only evaluate platforms visible in the current camera viewport
       if (plat.x + plat.width < camX - 80 || plat.x > camX + 1040) continue;
 
       for (const src of activeSources) {
-        // Check vertical proximity to platform top edge (normal facing upward)
         const dy = plat.y - src.y;
         if (dy > -35 && dy < src.r) {
           const clampedX = Phaser.Math.Clamp(src.x, plat.x + 12, plat.x + plat.width - 12);

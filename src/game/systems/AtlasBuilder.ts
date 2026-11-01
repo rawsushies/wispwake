@@ -3,14 +3,15 @@ import { CharacterArtManager } from './CharacterArtManager';
 import { TerrainVisualAssembler } from './TerrainVisualAssembler';
 
 /**
- * AtlasBuilder — Coordinates character, creature, interactive flora, and organic terrain
- * texture generation at scene boot.
+ * AtlasBuilder — Coordinates character, creature, interactive flora, environmental hazards,
+ * and organic terrain texture generation at scene boot.
  *
- * Milestone 3 Update:
- * - Delegates Nima (`nima_sheet`) and Pip (`pip_sheet`) directly to `CharacterArtManager`
- *   using the canonical hand-painted reference illustrations (`nima_side_gameplay_master`
- *   and `pip_gameplay_master`), with fallback procedural generation only if an image is still loading.
- * - Delegates organic terrain and gnarled Ember Coral brambles to `TerrainVisualAssembler`.
+ * Milestone 5 Upgrade:
+ * - Strictly clips every atlas cell (`ctx.rect(ox, oy, fw, fh); ctx.clip()`) and bounds all
+ *   radial gradients well inside cell borders so no sprite ever exhibits a rectangular glow edge.
+ * - Adds organic textures for Crumbling Surfaces (`crumbling_platform_sheet`),
+ *   Spore Vents (`spore_vent_sheet`), Falling Debris (`falling_debris_sheet`),
+ *   and Memory Echo lore shrines (`memory_echo_sheet`).
  */
 export class AtlasBuilder {
   public static buildAllAtlases(scene: Phaser.Scene): void {
@@ -29,6 +30,10 @@ export class AtlasBuilder {
     this.buildRootBridgeAtlas(scene);
     this.buildCheckpointAtlas(scene);
     this.buildAncientBloomAtlas(scene);
+    this.buildCrumblingPlatformAtlas(scene);
+    this.buildSporeVentAtlas(scene);
+    this.buildFallingDebrisAtlas(scene);
+    this.buildMemoryEchoAtlas(scene);
     TerrainVisualAssembler.buildOrganicHazardTexture(scene);
     this.buildVfxTextures(scene);
   }
@@ -74,21 +79,26 @@ export class AtlasBuilder {
       const ox = col * fw;
       const oy = row * fh;
       const cx = ox + fw * 0.5;
-      const cy = oy + 38;
+      const cy = oy + 42;
 
       const isResonating = i >= 8;
       const phase = ((i % 8) / 8) * Math.PI * 2;
       const pulse = Math.sin(phase);
 
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
       ctx.translate(cx, cy);
 
-      const glow = ctx.createRadialGradient(0, 6, 6, 0, 12, 68);
-      glow.addColorStop(0, isResonating ? 'rgba(241, 200, 120, 0.55)' : 'rgba(143, 231, 199, 0.38)');
+      // Strictly bounded radial glow (radius 36 <= 42 top margin)
+      const glow = ctx.createRadialGradient(0, 4, 4, 0, 4, 36);
+      glow.addColorStop(0, isResonating ? 'rgba(241, 200, 120, 0.45)' : 'rgba(143, 231, 199, 0.32)');
+      glow.addColorStop(0.65, isResonating ? 'rgba(241, 200, 120, 0.14)' : 'rgba(143, 231, 199, 0.10)');
       glow.addColorStop(1, 'rgba(143, 231, 199, 0)');
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(0, 8, 68, 0, Math.PI * 2);
+      ctx.arc(0, 4, 36, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.strokeStyle = isResonating ? 'rgba(241, 200, 120, 0.65)' : 'rgba(167, 184, 174, 0.55)';
@@ -98,11 +108,11 @@ export class AtlasBuilder {
         const sway = Math.sin(phase + t * 0.7) * 7;
         ctx.beginPath();
         ctx.moveTo(tx, 10);
-        ctx.quadraticCurveTo(tx + sway, 32, tx - sway * 0.6, 52);
+        ctx.quadraticCurveTo(tx + sway, 30, tx - sway * 0.6, 48);
         ctx.stroke();
       }
 
-      const bellWidth = 64 + pulse * 3;
+      const bellWidth = 62 + pulse * 2.5;
       const bellGrad = ctx.createLinearGradient(0, -24, 0, 18);
       bellGrad.addColorStop(0, isResonating ? '#F1C878' : '#8FE7C7');
       bellGrad.addColorStop(0.35, '#78906A');
@@ -176,13 +186,15 @@ export class AtlasBuilder {
       }
 
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
       ctx.translate(cx, cy);
 
-      // Rooted botanical stem with small side leaves
       ctx.strokeStyle = '#57725B';
       ctx.lineWidth = 6.5;
       ctx.beginPath();
-      ctx.moveTo(0, 52);
+      ctx.moveTo(0, 50);
       ctx.quadraticCurveTo(Math.sin(subPhase) * 4, 28, 0, 6);
       ctx.stroke();
 
@@ -198,12 +210,12 @@ export class AtlasBuilder {
       ctx.fill();
 
       if (openRatio < 0.35) {
-        const budGlow = ctx.createRadialGradient(0, -10, 2, 0, -10, 30);
-        budGlow.addColorStop(0, 'rgba(143, 231, 199, 0.4)');
+        const budGlow = ctx.createRadialGradient(0, -10, 2, 0, -10, 26);
+        budGlow.addColorStop(0, 'rgba(143, 231, 199, 0.36)');
         budGlow.addColorStop(1, 'rgba(143, 231, 199, 0)');
         ctx.fillStyle = budGlow;
         ctx.beginPath();
-        ctx.arc(0, -10, 30, 0, Math.PI * 2);
+        ctx.arc(0, -10, 26, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#294D4D';
@@ -224,11 +236,11 @@ export class AtlasBuilder {
         ctx.lineTo(0, 6);
         ctx.stroke();
       } else {
-        const span = 56 * openRatio;
-        const glowRadius = 56 * openRatio;
+        const span = 54 * openRatio;
+        const glowRadius = 42 * openRatio;
         const bloomGlow = ctx.createRadialGradient(0, -8, 4, 0, -8, glowRadius);
-        bloomGlow.addColorStop(0, isWarning ? 'rgba(233, 131, 114, 0.58)' : 'rgba(241, 200, 120, 0.7)');
-        bloomGlow.addColorStop(0.6, 'rgba(143, 231, 199, 0.28)');
+        bloomGlow.addColorStop(0, isWarning ? 'rgba(233, 131, 114, 0.52)' : 'rgba(241, 200, 120, 0.58)');
+        bloomGlow.addColorStop(0.6, 'rgba(143, 231, 199, 0.22)');
         bloomGlow.addColorStop(1, 'rgba(143, 231, 199, 0)');
         ctx.fillStyle = bloomGlow;
         ctx.beginPath();
@@ -294,16 +306,19 @@ export class AtlasBuilder {
       }
 
       ctx.save();
-      ctx.translate(ox + 12, oy + 42);
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
+      ctx.translate(ox + 16, oy + 42);
 
-      const bridgeLen = 236 * extendRatio;
+      const bridgeLen = 228 * extendRatio;
 
-      const nodeGlow = ctx.createRadialGradient(14, 0, 2, 14, 0, 28);
-      nodeGlow.addColorStop(0, extendRatio >= 1 ? 'rgba(241, 200, 120, 0.55)' : 'rgba(143, 231, 199, 0.45)');
+      const nodeGlow = ctx.createRadialGradient(14, 0, 2, 14, 0, 24);
+      nodeGlow.addColorStop(0, extendRatio >= 1 ? 'rgba(241, 200, 120, 0.50)' : 'rgba(143, 231, 199, 0.40)');
       nodeGlow.addColorStop(1, 'rgba(143, 231, 199, 0)');
       ctx.fillStyle = nodeGlow;
       ctx.beginPath();
-      ctx.arc(14, 0, 28, 0, Math.PI * 2);
+      ctx.arc(14, 0, 24, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#3B2F26';
@@ -370,16 +385,20 @@ export class AtlasBuilder {
       const pulse = Math.sin((i / 4) * Math.PI * 2);
 
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
       ctx.translate(cx, by);
 
       if (isLit) {
-        const lanternGlow = ctx.createRadialGradient(0, -64, 4, 0, -64, 44 * litStrength);
-        lanternGlow.addColorStop(0, 'rgba(241, 200, 120, 0.85)');
-        lanternGlow.addColorStop(0.5, 'rgba(143, 231, 199, 0.35)');
+        const radius = 38 * litStrength;
+        const lanternGlow = ctx.createRadialGradient(0, -64, 3, 0, -64, radius);
+        lanternGlow.addColorStop(0, 'rgba(241, 200, 120, 0.78)');
+        lanternGlow.addColorStop(0.55, 'rgba(143, 231, 199, 0.28)');
         lanternGlow.addColorStop(1, 'rgba(241, 200, 120, 0)');
         ctx.fillStyle = lanternGlow;
         ctx.beginPath();
-        ctx.arc(0, -64, 44 * litStrength, 0, Math.PI * 2);
+        ctx.arc(0, -64, radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -443,12 +462,16 @@ export class AtlasBuilder {
       const phase = (col / 4) * Math.PI * 2;
 
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
       ctx.translate(cx, cy);
 
-      const haloRadius = 55 + openAmount * 75 + Math.sin(phase) * 6;
+      // Strictly bounded inside cell (distance to top edge is 142px, so max radius 115px)
+      const haloRadius = 48 + openAmount * 60 + Math.sin(phase) * 4;
       const halo = ctx.createRadialGradient(0, -70, 8, 0, -70, haloRadius);
-      halo.addColorStop(0, openAmount > 0.5 ? 'rgba(241, 200, 120, 0.92)' : 'rgba(143, 231, 199, 0.45)');
-      halo.addColorStop(0.5, openAmount > 0.5 ? 'rgba(143, 231, 199, 0.45)' : 'rgba(41, 77, 77, 0.25)');
+      halo.addColorStop(0, openAmount > 0.5 ? 'rgba(241, 200, 120, 0.85)' : 'rgba(143, 231, 199, 0.42)');
+      halo.addColorStop(0.55, openAmount > 0.5 ? 'rgba(143, 231, 199, 0.36)' : 'rgba(41, 77, 77, 0.20)');
       halo.addColorStop(1, 'rgba(241, 200, 120, 0)');
       ctx.fillStyle = halo;
       ctx.beginPath();
@@ -510,41 +533,212 @@ export class AtlasBuilder {
     canvasTex.refresh();
   }
 
+  private static buildCrumblingPlatformAtlas(scene: Phaser.Scene): void {
+    if (scene.textures.exists('crumbling_platform_sheet')) return;
+
+    const fw = 160;
+    const fh = 52;
+    const cols = 4;
+    const canvasTex = scene.textures.createCanvas('crumbling_platform_sheet', fw * cols, fh);
+    if (!canvasTex) return;
+    const ctx = canvasTex.getContext();
+
+    for (let i = 0; i < 4; i++) {
+      const ox = i * fw;
+      const oy = 0;
+      const crackIntensity = i / 3;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, fw, fh);
+      ctx.clip();
+      ctx.translate(ox + 8, oy + 6);
+
+      // Ancient fractured bark/stone slab
+      const slabGrad = ctx.createLinearGradient(0, 0, 0, 36);
+      slabGrad.addColorStop(0, i >= 2 ? '#C9876E' : '#6A7B6E');
+      slabGrad.addColorStop(0.35, '#424E58');
+      slabGrad.addColorStop(1, '#222B38');
+
+      ctx.fillStyle = slabGrad;
+      ctx.strokeStyle = i >= 1 ? '#F1C878' : '#8FA87E';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 144, 34, 9);
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing fracture lines that brighten as it prepares to crumble
+      ctx.strokeStyle = i === 0 ? 'rgba(143, 231, 199, 0.35)' : `rgba(241, 200, 120, ${0.45 + crackIntensity * 0.5})`;
+      ctx.lineWidth = 1.6 + crackIntensity * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(32, 2);
+      ctx.lineTo(44, 18);
+      ctx.lineTo(36, 32);
+      ctx.moveTo(86, 2);
+      ctx.lineTo(76, 17);
+      ctx.lineTo(92, 32);
+      ctx.moveTo(116, 4);
+      ctx.lineTo(108, 26);
+      ctx.stroke();
+
+      ctx.restore();
+      canvasTex.add(i, 0, ox, oy, fw, fh);
+    }
+
+    canvasTex.refresh();
+  }
+
+  private static buildSporeVentAtlas(scene: Phaser.Scene): void {
+    if (scene.textures.exists('spore_vent_sheet')) return;
+
+    const fw = 76;
+    const fh = 64;
+    const cols = 3;
+    const canvasTex = scene.textures.createCanvas('spore_vent_sheet', fw * cols, fh);
+    if (!canvasTex) return;
+    const ctx = canvasTex.getContext();
+
+    for (let i = 0; i < 3; i++) {
+      const ox = i * fw;
+      const cx = ox + fw * 0.5;
+      const by = fh - 6;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, 0, fw, fh);
+      ctx.clip();
+      ctx.translate(cx, by);
+
+      // Vent chimney mound
+      ctx.fillStyle = '#2A3846';
+      ctx.strokeStyle = i === 0 ? '#57725B' : i === 1 ? '#F1C878' : '#E98372';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-28, 0);
+      ctx.quadraticCurveTo(-20, -34, -12, -40);
+      ctx.lineTo(12, -40);
+      ctx.quadraticCurveTo(20, -34, 28, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner glowing throat
+      ctx.fillStyle = i === 0 ? '#294D4D' : i === 1 ? '#F1C878' : '#FF9E80';
+      ctx.beginPath();
+      ctx.ellipse(0, -38, 10, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      canvasTex.add(i, 0, ox, 0, fw, fh);
+    }
+
+    canvasTex.refresh();
+  }
+
+  private static buildFallingDebrisAtlas(scene: Phaser.Scene): void {
+    if (scene.textures.exists('falling_debris_sheet')) return;
+
+    const fw = 48;
+    const fh = 68;
+    const canvasTex = scene.textures.createCanvas('falling_debris_sheet', fw * 2, fh);
+    if (!canvasTex) return;
+    const ctx = canvasTex.getContext();
+
+    for (let i = 0; i < 2; i++) {
+      const ox = i * fw;
+      const cx = ox + fw * 0.5;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, 0, fw, fh);
+      ctx.clip();
+      ctx.translate(cx, 6);
+
+      ctx.fillStyle = '#364554';
+      ctx.strokeStyle = i === 1 ? '#F1C878' : '#8FE7C7';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(16, 0);
+      ctx.lineTo(8, 34);
+      ctx.lineTo(0, 56);
+      ctx.lineTo(-8, 34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+      canvasTex.add(i, 0, ox, 0, fw, fh);
+    }
+
+    canvasTex.refresh();
+  }
+
+  private static buildMemoryEchoAtlas(scene: Phaser.Scene): void {
+    if (scene.textures.exists('memory_echo_sheet')) return;
+
+    const fw = 88;
+    const fh = 104;
+    const cols = 4;
+    const canvasTex = scene.textures.createCanvas('memory_echo_sheet', fw * cols, fh);
+    if (!canvasTex) return;
+    const ctx = canvasTex.getContext();
+
+    for (let i = 0; i < 4; i++) {
+      const ox = i * fw;
+      const cx = ox + fw * 0.5;
+      const cy = fh * 0.52;
+      const awakened = i >= 2;
+      const pulse = (i % 2) * 3;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, 0, fw, fh);
+      ctx.clip();
+      ctx.translate(cx, cy);
+
+      const halo = ctx.createRadialGradient(0, -4, 3, 0, -4, 34);
+      halo.addColorStop(0, awakened ? 'rgba(241, 200, 120, 0.72)' : 'rgba(143, 231, 199, 0.45)');
+      halo.addColorStop(1, 'rgba(143, 231, 199, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, -4, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Floating memory crystal / seed chime
+      ctx.fillStyle = awakened ? '#F1C878' : '#8FE7C7';
+      ctx.strokeStyle = '#FFFDF5';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -26 - pulse);
+      ctx.quadraticCurveTo(16, -6, 0, 20 + pulse);
+      ctx.quadraticCurveTo(-16, -6, 0, -26 - pulse);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+      canvasTex.add(i, 0, ox, 0, fw, fh);
+    }
+
+    canvasTex.refresh();
+  }
+
   private static buildVfxTextures(scene: Phaser.Scene): void {
     if (!scene.textures.exists('vfx_spore')) {
       const sporeTex = scene.textures.createCanvas('vfx_spore', 32, 32);
       if (sporeTex) {
         const ctx = sporeTex.getContext();
-        const grad = ctx.createRadialGradient(16, 16, 1, 16, 16, 15);
+        const grad = ctx.createRadialGradient(16, 16, 1, 16, 16, 14);
         grad.addColorStop(0, 'rgba(255, 250, 230, 1)');
         grad.addColorStop(0.4, 'rgba(143, 231, 199, 0.75)');
         grad.addColorStop(1, 'rgba(143, 231, 199, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(16, 16, 15, 0, Math.PI * 2);
+        ctx.arc(16, 16, 14, 0, Math.PI * 2);
         ctx.fill();
         sporeTex.refresh();
-      }
-    }
-
-    if (!scene.textures.exists('vfx_wake_ring')) {
-      const ringTex = scene.textures.createCanvas('vfx_wake_ring', 256, 256);
-      if (ringTex) {
-        const ctx = ringTex.getContext();
-        const cx = 128;
-        const cy = 128;
-        const grad = ctx.createRadialGradient(cx, cy, 70, cx, cy, 124);
-        grad.addColorStop(0, 'rgba(143, 231, 199, 0)');
-        grad.addColorStop(0.65, 'rgba(143, 231, 199, 0.25)');
-        grad.addColorStop(0.88, 'rgba(241, 200, 120, 0.85)');
-        grad.addColorStop(0.96, 'rgba(143, 231, 199, 0.95)');
-        grad.addColorStop(1, 'rgba(143, 231, 199, 0)');
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 124, 0, Math.PI * 2);
-        ctx.fill();
-        ringTex.refresh();
       }
     }
   }

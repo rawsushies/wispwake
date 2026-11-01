@@ -3,6 +3,7 @@ import {
   ActiveDialogueBubble,
   CampaignChapterId,
   GENERATED_ASSETS,
+  StoryDifficulty,
   TelemetrySnapshot,
   TrialDifficulty,
 } from '../config/gameConfig';
@@ -13,8 +14,13 @@ import { TerrainVisualAssembler } from '../systems/TerrainVisualAssembler';
 import { LivingEnvironmentSystem } from '../systems/LivingEnvironmentSystem';
 import { DynamicLightSource, LightingSystem } from '../systems/LightingSystem';
 import { DialogueManager } from '../systems/DialogueManager';
-import { CAMPAIGN_CHAPTERS, getCampaignChapter } from '../systems/LevelRegistry';
+import {
+  applyStoryDifficultyToLevel,
+  CAMPAIGN_CHAPTERS,
+  getCampaignChapter,
+} from '../systems/LevelRegistry';
 import { WakeTrialsGenerator } from '../systems/WakeTrialsGenerator';
+import { EnvironmentalHazardSystem } from '../systems/EnvironmentalHazardSystem';
 import { InputManager } from '../systems/InputManager';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
@@ -58,6 +64,7 @@ export class GameplayScene extends Phaser.Scene {
   private wakeSystem!: WakeSystem;
   private cameraController!: CameraController;
   private environmentSystem!: LivingEnvironmentSystem;
+  private envHazardSystem!: EnvironmentalHazardSystem;
   private lightingSystem!: LightingSystem;
   private dialogueManager!: DialogueManager;
   private latestDialogueBubble: ActiveDialogueBubble | null = null;
@@ -69,7 +76,8 @@ export class GameplayScene extends Phaser.Scene {
   private blooms: BloomPlatform[] = [];
   private rootBridges: RootBridge[] = [];
   private drifters: Drifter[] = [];
-  private checkpoint!: Checkpoint;
+  private checkpoints: Checkpoint[] = [];
+  private activeCheckpoint: Checkpoint | null = null;
   private ancientBloom!: AncientBloom;
 
   private debugGraphics!: Phaser.GameObjects.Graphics;
@@ -113,7 +121,9 @@ export class GameplayScene extends Phaser.Scene {
       this.trialSeed = built.seed;
       this.levelDef = built.levelDef;
     } else {
-      this.levelDef = getCampaignChapter(this.activeMode);
+      const baseChapter = getCampaignChapter(this.activeMode);
+      const storyDifficulty = SaveManager.getStoryDifficulty();
+      this.levelDef = applyStoryDifficultyToLevel(baseChapter, storyDifficulty);
     }
   }
 
@@ -153,12 +163,17 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private buildLevelWorld(): void {
+    if (this.envHazardSystem) {
+      this.envHazardSystem.destroy();
+    }
     this.children.removeAll(true);
     this.physics.world.colliders.destroy();
     this.platformVisuals = [];
     this.blooms = [];
     this.rootBridges = [];
     this.drifters = [];
+    this.checkpoints = [];
+    this.activeCheckpoint = null;
     this.trialElapsedSec = 0;
     this.latestDialogueBubble = null;
 
@@ -171,7 +186,7 @@ export class GameplayScene extends Phaser.Scene {
       this.activeMode !== 'wake_trial' ? SaveManager.getChapterProgress(this.activeMode) : null;
     this.isChapterRestored = Boolean(chapterSave?.completed);
 
-    // 1. 6-LAYER LIVING ENVIRONMENT SYSTEM (Multi-Biome + Upper Canopy & Midground Bands)
+    // 1. 6-LAYER LIVING ENVIRONMENT SYSTEM
     this.environmentSystem = new LivingEnvironmentSystem(
       this,
       w,
@@ -181,7 +196,7 @@ export class GameplayScene extends Phaser.Scene {
       biome
     );
 
-    // 2. GAMEPLAY PLANE: Authored Static Collision Bodies + Separate Multi-Biome Organic Terrain Visuals
+    // 2. GAMEPLAY PLANE: Authored Static Collision Bodies + Organic Terrain Visuals
     this.staticPlatforms = this.physics.add.staticGroup();
     this.levelDef.platforms.forEach((platSpec, idx) => {
       const centerX = platSpec.x + platSpec.width * 0.5;
@@ -216,7 +231,7 @@ export class GameplayScene extends Phaser.Scene {
     this.wakeSystem = new WakeSystem(this);
 
     for (const bSpec of this.levelDef.blooms) {
-      const bloom = new BloomPlatform(this, bSpec.id, bSpec.x, bSpec.y);
+      const bloom = new BloomPlatform(this, bSpec.id, bSpec.x, bSpec.y, bSpec.customDuration);
       this.blooms.push(bloom);
       this.wakeSystem.register(bloom);
     }
@@ -249,17 +264,45 @@ export class GameplayScene extends Phaser.Scene {
       this.wakeSystem.register(drifter);
     }
 
-    const cpSpec = this.levelDef.checkpoint;
-    const isCpActive = Boolean(chapterSave && chapterSave.activeCheckpointId === cpSpec.id);
-    this.checkpoint = new Checkpoint(
-      this,
-      this.activeMode,
-      cpSpec.id,
-      cpSpec.x,
-      cpSpec.y,
-      isCpActive
-    );
-    this.wakeSystem.register(this.checkpoint);
+    // Multi-Checkpoint Array with Supporting Platform Bound Clamping (Bug Priority D)
+    const cpSpecs =
+      this.levelDef.checkpoints && this.levelDef.checkpoints.length > 0
+        ? this.levelDef.checkpoints
+        : [this.levelDef.checkpoint];
+
+    for (const cpSpec of cpSpecs) {
+      const hostPlat = this.levelDef.platforms.find(
+        (p) => cpSpec.x >= p.x - 16 && cpSpec.x <= p.x + p.width + 16
+      );
+      const isCpUnlocked = Boolean(
+        chapterSave &&
+          (chapterSave.unlockedCheckpointIds.includes(cpSpec.id) ||
+            chapterSave.activeCheckpointId === cpSpec.id)
+      );
+      const cp = new Checkpoint(
+        this,
+        this.activeMode,
+        cpSpec.id,
+        cpSpec.x,
+        hostPlat ? hostPlat.y : cpSpec.y,
+        isCpUnlocked,
+        hostPlat ? hostPlat.x : undefined,
+        hostPlat ? hostPlat.x + hostPlat.width : undefined
+      );
+      this.checkpoints.push(cp);
+      this.wakeSystem.register(cp);
+
+      if (chapterSave && chapterSave.activeCheckpointId === cpSpec.id) {
+        this.activeCheckpoint = cp;
+      }
+    }
+
+    if (!this.activeCheckpoint) {
+      const unlockedList = this.checkpoints.filter((c) => c.isActivated);
+      if (unlockedList.length > 0) {
+        this.activeCheckpoint = unlockedList[unlockedList.length - 1];
+      }
+    }
 
     const abSpec = this.levelDef.ancientBloom;
     this.ancientBloom = new AncientBloom(
@@ -273,22 +316,37 @@ export class GameplayScene extends Phaser.Scene {
     );
     this.wakeSystem.register(this.ancientBloom);
 
-    // 5. Safe Player (Nima) & Companion (Pip) Spawn (Priority 3: Safe Platform Top Calculation)
+    // 5. Safe Player (Nima) & Companion (Pip) Spawn
     const firstPlatTop = this.levelDef.platforms[0]?.y ?? this.levelDef.spawnY + 44;
     let spawnX = this.levelDef.spawnX;
     let spawnY = Player.getSafeCenterYForPlatformTop(firstPlatTop, 4);
 
-    if (isCpActive) {
-      spawnX = this.checkpoint.spawnX;
-      spawnY = this.checkpoint.spawnY; // Calibrated via Player.getSafeCenterYForPlatformTop
+    if (this.activeCheckpoint) {
+      spawnX = this.activeCheckpoint.spawnX;
+      spawnY = this.activeCheckpoint.spawnY;
     }
 
     this.player = new Player(this, spawnX, spawnY);
     this.pip = new Pip(this, spawnX - 32, spawnY - 44);
 
-    // 6. Hybrid 2D/2.5D Dynamic Lighting System & Pip Companion Dialogue Manager
-    this.lightingSystem = new LightingSystem(this, biome, this.levelDef.platforms, this.isChapterRestored);
+    // 6. Dialogue, Lighting, and Environmental Hazard Systems
     this.dialogueManager = new DialogueManager(this, this.activeMode);
+    this.lightingSystem = new LightingSystem(this, biome, this.levelDef.platforms, this.isChapterRestored);
+
+    this.envHazardSystem = new EnvironmentalHazardSystem(
+      this,
+      this.levelDef,
+      this.player,
+      this.wakeSystem,
+      () => {
+        if (!this.player.isRespawnProtected()) {
+          this.triggerHazardRespawn();
+        }
+      },
+      (memSpec) => {
+        this.dialogueManager.triggerById(memSpec.dialogueId);
+      }
+    );
 
     // 7. Physics Colliders
     this.physics.add.collider(this.player.sprite, this.staticPlatforms);
@@ -300,11 +358,7 @@ export class GameplayScene extends Phaser.Scene {
       this.physics.add.collider(this.player.sprite, bridge.sprite);
     }
     for (const drifter of this.drifters) {
-      this.physics.add.collider(this.player.sprite, drifter.sprite, () => {
-        if (this.player.body.touching.down) {
-          this.player.sprite.x += drifter.deltaX;
-        }
-      });
+      this.physics.add.collider(this.player.sprite, drifter.sprite);
     }
 
     this.physics.add.overlap(this.player.sprite, this.hazardGroup, () => {
@@ -348,6 +402,12 @@ export class GameplayScene extends Phaser.Scene {
 
     const didFire = this.wakeSystem.tryTriggerWake(px, py);
     if (didFire) {
+      // Check if any checkpoint was newly activated via Wake
+      for (const cp of this.checkpoints) {
+        if (cp.isActivated && Phaser.Math.Distance.Between(px, py, cp.sprite.x, cp.sprite.y - 36) <= activePhysicsTuning.wakeRadius + 24) {
+          this.activeCheckpoint = cp;
+        }
+      }
       this.player.triggerWakeAnimation();
       this.pip.triggerWakeReaction();
       this.environmentSystem.onWakePulse(px, py, activePhysicsTuning.wakeRadius);
@@ -369,13 +429,13 @@ export class GameplayScene extends Phaser.Scene {
     for (const drifter of this.drifters) {
       drifter.resetDeterministic();
     }
+    this.envHazardSystem?.resetAllTransientHazards();
 
-    // Priority 3: Safe Platform-Top Respawn Coordinates
     const firstPlatTop = this.levelDef.platforms[0]?.y ?? this.levelDef.spawnY + 44;
     const defaultSafeY = Player.getSafeCenterYForPlatformTop(firstPlatTop, 4);
 
-    const respawnX = this.checkpoint.isActivated ? this.checkpoint.spawnX : this.levelDef.spawnX;
-    const respawnY = this.checkpoint.isActivated ? this.checkpoint.spawnY : defaultSafeY;
+    const respawnX = this.activeCheckpoint ? this.activeCheckpoint.spawnX : this.levelDef.spawnX;
+    const respawnY = this.activeCheckpoint ? this.activeCheckpoint.spawnY : defaultSafeY;
 
     this.player.respawnAt(respawnX, respawnY);
     this.pip.snapToPlayer(this.player);
@@ -448,13 +508,13 @@ export class GameplayScene extends Phaser.Scene {
       }
     }
 
-    if (this.checkpoint) {
+    for (const cp of this.checkpoints) {
       lights.push({
-        x: this.checkpoint.sprite.x,
-        y: this.checkpoint.sprite.y - 24,
-        radius: this.checkpoint.isActivated ? 195 : 95,
-        colorHex: this.checkpoint.isActivated ? '241, 200, 120' : '143, 231, 199',
-        intensity: this.checkpoint.isActivated ? 0.85 : 0.38,
+        x: cp.sprite.x,
+        y: cp.sprite.y - 24,
+        radius: cp.isActivated ? 195 : 95,
+        colorHex: cp.isActivated ? '241, 200, 120' : '143, 231, 199',
+        intensity: cp.isActivated ? 0.85 : 0.38,
       });
     }
 
@@ -474,8 +534,9 @@ export class GameplayScene extends Phaser.Scene {
   public update(_time: number, rawDeltaMs: number): void {
     const dt = Math.min(rawDeltaMs / 1000, 0.05);
 
+    // Bug Priority C Fix: Single-authority kinematic Drifter update with 2D passenger carrying
     for (const drifter of this.drifters) {
-      drifter.update(dt);
+      drifter.update(dt, this.isTitleAttractMode ? undefined : this.player);
     }
     for (const bloom of this.blooms) {
       bloom.update(dt);
@@ -493,6 +554,8 @@ export class GameplayScene extends Phaser.Scene {
         this.trialElapsedSec += dt;
       }
 
+      this.envHazardSystem?.update(dt, this.player);
+
       this.player.update(
         dt,
         () => this.handleWakeAction(),
@@ -503,10 +566,12 @@ export class GameplayScene extends Phaser.Scene {
         this.triggerHazardRespawn();
       }
 
-      const wasCpActive = this.checkpoint.isActivated;
-      this.checkpoint.checkProximityActivation(this.player.sprite.x, this.player.sprite.y);
-      if (!wasCpActive && this.checkpoint.isActivated) {
-        this.dialogueManager.triggerEvent('checkpoint_reached');
+      for (const cp of this.checkpoints) {
+        const newlyLit = cp.checkProximityActivation(this.player.sprite.x, this.player.sprite.y);
+        if (newlyLit) {
+          this.activeCheckpoint = cp;
+          this.dialogueManager.triggerEvent('checkpoint_reached');
+        }
       }
 
       const nearestHint = this.wakeSystem.update(dt, this.player.sprite.x, this.player.sprite.y);
@@ -615,9 +680,10 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     const activeRootCount = this.rootBridges.filter((r) => r.state !== 'recessed').length;
-    const totalRestorable = this.rootBridges.length + 1 + 1;
+    const unlockedCpCount = this.checkpoints.filter((c) => c.isActivated).length;
+    const totalRestorable = this.rootBridges.length + this.checkpoints.length + 1;
     const restoredCount =
-      activeRootCount + (this.checkpoint?.isActivated ? 1 : 0) + (this.ancientBloom?.isRestored ? 1 : 0);
+      activeRootCount + unlockedCpCount + (this.ancientBloom?.isRestored ? 1 : 0);
 
     this.callbacks.onTelemetry({
       fps: Math.round(this.game.loop.actualFps || 60),
@@ -634,11 +700,16 @@ export class GameplayScene extends Phaser.Scene {
       chapterTitle: this.levelDef.title,
       currentBeatTitle: currentBeat ? `${currentBeat.title} — ${currentBeat.subtitle}` : this.levelDef.title,
       currentBeatIndex: currentBeat ? currentBeat.index : 1,
-      activeCheckpointId: this.checkpoint?.isActivated ? this.checkpoint.id : null,
+      activeCheckpointId: this.activeCheckpoint ? this.activeCheckpoint.id : null,
+      unlockedCheckpointsCount: unlockedCpCount,
+      totalCheckpointsCount: this.checkpoints.length,
       restoredCount,
       totalRestorable,
+      discoveredMemoriesCount: this.envHazardSystem ? this.envHazardSystem.getDiscoveredMemoryEchoesCount() : 0,
+      totalMemoriesCount: this.envHazardSystem ? this.envHazardSystem.getTotalMemoryEchoesCount() : 0,
       chapterCompleted: this.isChapterRestored,
       activeDialogue: this.latestDialogueBubble,
+      storyDifficulty: SaveManager.getStoryDifficulty(),
       trialElapsedSec: Number(this.trialElapsedSec.toFixed(1)),
       trialSeed: this.activeMode === 'wake_trial' ? this.trialSeed : null,
       trialDifficulty: this.activeMode === 'wake_trial' ? this.trialDifficulty : null,
@@ -672,7 +743,14 @@ export class GameplayScene extends Phaser.Scene {
     this.triggerHazardRespawn();
   }
 
-  public loadCampaignChapter(chapterId: CampaignChapterId, resetChapterProgress = false): void {
+  public loadCampaignChapter(
+    chapterId: CampaignChapterId,
+    resetChapterProgress = false,
+    storyDifficulty?: StoryDifficulty
+  ): void {
+    if (storyDifficulty) {
+      SaveManager.setStoryDifficulty(storyDifficulty);
+    }
     if (resetChapterProgress) {
       SaveManager.resetChapterProgress(chapterId);
     }

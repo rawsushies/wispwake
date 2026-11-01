@@ -7,11 +7,13 @@ import { CampaignChapterId } from '../config/gameConfig';
 import { Player } from '../entities/player/Player';
 
 /**
- * Checkpoint (Milestone 4 Safe Respawn Calibration — Section 04):
- * - Computes `spawnY` using `Player.getSafeCenterYForPlatformTop(platformTopY)` so Nima's
- *   physics hitbox (`34x72`, bottom at `sprite.y + 44`) always spawns 4px above the supporting
- *   platform's walkable top surface and never intersects inside the platform.
- * - Persists checkpoint state per campaign chapter in `SaveManager` (Schema v2).
+ * Checkpoint (Milestone 5 Multi-Checkpoint & Safe Respawn Calibration — Bug Priority D):
+ * - Computes `spawnX` clamped strictly inside the supporting platform's horizontal bounds
+ *   (`[platformMinX + 28, platformMaxX - 28]`) and `spawnY` using
+ *   `Player.getSafeCenterYForPlatformTop(platformTopY, 4)` so Nima's physics hitbox (`34x72`,
+ *   bottom at `sprite.y + 44`) always spawns 4px above the supporting platform's walkable top surface.
+ * - Supports multiple checkpoints per chapter (3–5 per chapter) and persists both the active
+ *   checkpoint and all unlocked checkpoints in `SaveManager`.
  */
 export class Checkpoint implements WakeInteractable {
   public readonly id: string;
@@ -20,6 +22,7 @@ export class Checkpoint implements WakeInteractable {
   private readonly scene: Phaser.Scene;
   public readonly spawnX: number;
   public readonly spawnY: number;
+  public readonly platformTopY: number;
 
   public isActivated = false;
 
@@ -29,12 +32,18 @@ export class Checkpoint implements WakeInteractable {
     id: string,
     x: number,
     platformTopY: number,
-    initiallyActivated = false
+    initiallyActivated = false,
+    platformMinX?: number,
+    platformMaxX?: number
   ) {
     this.scene = scene;
     this.chapterId = chapterId;
     this.id = id;
-    this.spawnX = x;
+    this.platformTopY = platformTopY;
+
+    const minSafeX = platformMinX !== undefined ? platformMinX + 28 : x - 20;
+    const maxSafeX = platformMaxX !== undefined ? platformMaxX - 28 : x + 20;
+    this.spawnX = Math.max(minSafeX, Math.min(maxSafeX, x));
     this.spawnY = Player.getSafeCenterYForPlatformTop(platformTopY, 4);
 
     this.registerAnimations(scene);
@@ -81,7 +90,7 @@ export class Checkpoint implements WakeInteractable {
   }
 
   public isEligibleForWake(): boolean {
-    return !this.isActivated;
+    return true; // Can be lit when dormant or re-selected as active checkpoint
   }
 
   public isDormantForHint(): boolean {
@@ -101,47 +110,51 @@ export class Checkpoint implements WakeInteractable {
   }
 
   public checkProximityActivation(playerX: number, playerY: number): boolean {
-    if (this.isActivated) return false;
     const dist = Phaser.Math.Distance.Between(playerX, playerY, this.sprite.x, this.sprite.y - 36);
-    if (dist <= 72) {
-      return this.activate();
+    if (dist <= 76) {
+      if (!this.isActivated) {
+        return this.activate();
+      }
     }
     return false;
   }
 
   public activate(): boolean {
-    if (this.isActivated) return false;
+    const wasAlreadyActivated = this.isActivated;
     this.isActivated = true;
     this.sprite.setTint(0xffffff);
-    AudioManager.playCheckpoint();
 
     if (this.chapterId !== 'wake_trial') {
       SaveManager.recordCheckpoint(this.chapterId, this.id, this.spawnX, this.spawnY);
     }
 
-    this.sprite.play('checkpoint_activating', true);
-    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'checkpoint_activating', () => {
-      this.sprite.play('checkpoint_active', true);
-    });
-
-    for (let i = 0; i < 8; i++) {
-      const mote = this.scene.add.image(
-        this.sprite.x + (Math.random() - 0.5) * 32,
-        this.sprite.y - 45,
-        'vfx_spore'
-      );
-      mote.setDepth(21);
-      mote.setScale(0.55);
-      mote.setBlendMode(Phaser.BlendModes.ADD);
-      this.scene.tweens.add({
-        targets: mote,
-        y: mote.y - 48 - Math.random() * 24,
-        alpha: 0,
-        duration: 750 + Math.random() * 300,
-        onComplete: () => mote.destroy(),
+    if (!wasAlreadyActivated) {
+      AudioManager.playCheckpoint();
+      this.sprite.play('checkpoint_activating', true);
+      this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'checkpoint_activating', () => {
+        this.sprite.play('checkpoint_active', true);
       });
+
+      for (let i = 0; i < 8; i++) {
+        const mote = this.scene.add.image(
+          this.sprite.x + (Math.random() - 0.5) * 32,
+          this.sprite.y - 45,
+          'vfx_spore'
+        );
+        mote.setDepth(21);
+        mote.setScale(0.55);
+        mote.setBlendMode(Phaser.BlendModes.ADD);
+        this.scene.tweens.add({
+          targets: mote,
+          y: mote.y - 48 - Math.random() * 24,
+          alpha: 0,
+          duration: 750 + Math.random() * 300,
+          onComplete: () => mote.destroy(),
+        });
+      }
+      return true;
     }
 
-    return true;
+    return false;
   }
 }

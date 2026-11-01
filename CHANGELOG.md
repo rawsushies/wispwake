@@ -2,47 +2,45 @@
 
 All notable changes to **Wispwake — A Journey Through a Sleeping World** are documented in this file.
 
-## [0.4.0] — Milestone 4: Campaign, Companion, Lighting & Platform Expansion
+## [0.5.0] — Milestone 5: The Complete Adventure
 
 ### Added
-- **Four-Chapter Story Campaign (`LevelRegistry.ts`)**:
-  - **Chapter 01**: *The Sleeping Canopy* (`canopy` biome)
-  - **Chapter 02**: *The Moonlit Marsh* (`marsh` biome with reflective water backdrop, sunken arches, and marsh reeds)
-  - **Chapter 03**: *The Hollow Below* (`cavern` biome with subterranean giant roots and bioluminescent purple/mint fungi)
-  - **Chapter 04**: *The Windward Ruins* (`ruins` biome with high-altitude stone arches and wind-swept foliage)
-- **Procedural Challenge Mode (`Wake Trials`)**:
-  - Deterministic seeded platforming challenges across `Easy`, `Medium`, `Hard`, and `Extreme` difficulties (`WakeTrialsGenerator.ts`).
-  - Built-in physics traversability validator (`validateLevelTraversability`) ensuring every generated jump gap and elevation change is physically solvable.
-  - Live run timer, shareable seed input/randomizer, and personal best records per difficulty.
-- **Pip Companion Helper & Narrator (`DialogueManager.ts`, `dialogueData.ts`)**:
-  - Authored 24 story narration and contextual puzzle-helper dialogue entries across all 4 chapters.
-  - World-matched floating speech bubble positioned near Pip that never obscures Nima, with `Skip` affordance and Subtitle toggle.
-- **Hybrid Dynamic 2D / 2.5D Lighting System (`LightingSystem.ts`)**:
-  - Real-time MULTIPLY canvas lightmap with localized warm Sap Gold (`#F1C878`) and cool Wake Mint (`#8FE7C7`) illumination from Nima's seed, Pip, Wake pulses, awakened flowers, checkpoints, and Ancient Blooms.
-  - Soft 2D projected drop shadows beneath platforms and normal-style directional rim highlights.
-  - Configurable lighting quality (`Auto`, `High`, `Balanced`, `Low`).
-- **Upper Canopy & Midground Vertical Bands (`LivingEnvironmentSystem.ts`)**:
-  - Added overhanging canopy branches, blossom garlands, upper-band vines, and multi-height wisps/birds so the upper viewport feels richly inhabited.
-- **Responsive Mobile & Tablet Controls (`InputManager.ts`)**:
-  - Unified Keyboard, Multi-Touch, and Gamepad input abstraction with automatic touch detection and portrait-orientation guidance.
+- **Expanded 4-Chapter Story Campaign (`levelData.ts`, `LevelRegistry.ts`)**:
+  - Expanded every campaign chapter to `11,200–12,800` logical units with **10 distinct named sub-areas**, `23–27` platforming structures, `4` Resonance Cairn checkpoints, and `2` optional secret **Memory Echo** lore shrines (`8` total across the campaign):
+    - **Chapter 01 — The Sleeping Canopy**: *01. The First Awakening* through *10. The First Bloom Sanctuary*.
+    - **Chapter 02 — The Moonlit Marsh**: Introduces **Water Currents** (`waterCurrents`), drifting lily organisms, sunken bell shrines, and the Marsh Lotus.
+    - **Chapter 03 — The Hollow Below**: Introduces rhythmic **Spore Vents** (`sporeVents`), **Crumbling Surfaces** (`crumblingPlatforms`), **Falling Debris** (`fallingDebris`), and the Root-Heart Chamber.
+    - **Chapter 04 — The Windward Ruins**: Introduces skyward **Wind Zones & Updrafts** (`windZones`), crumbling sky-stones, double Drifter transfers, and the Great Crown Bloom ending.
+- **True Story & Wake Trials Difficulty System (`LevelRegistry.ts`, `SaveManager.ts`)**:
+  - Independent **Story Difficulty** (`Easy`, `Medium`, `Hard`, `Extreme`) and **Wake Trials Difficulty** (`Easy`, `Medium`, `Hard`, `Extreme`).
+  - Story Difficulty dynamically adapts Bloom platform duration (`6.8s` / `5.2s` / `4.1s` / `3.35s`), crumbling ledge escape windows, Drifter cycle speed, hazard density, and checkpoint spacing without making Nima's movement sluggish.
+- **Rebuilt Wake Trials & Simulation-Based Traversal Validator (`WakeTrialsGenerator.ts`, `TraversalSimulationValidator.ts`)**:
+  - Expanded segment counts to `12–16` (`Easy`), `16–20` (`Medium`), `22–26` (`Hard`), and `28–36` (`Extreme`) across **15 curated segment archetypes**.
+  - Built `TraversalSimulationValidator.ts` with step-by-step kinematic jump trajectory integration (`dt = 1/60s`), Wake range/duration verification, and Route Graph BFS reachability proof (verified across 200 deterministic seeds).
+- **Menu Redesign & About Wispwake (`App.tsx`)**:
+  - Streamlined Title Screen to **three primary buttons**: `PLAY`, `SETTINGS`, `CREDITS`.
+  - Created the **Combined Play Selection Interface** with tabs for **STORY JOURNEY** and **WAKE TRIALS**.
+  - Upgraded **CREDITS** into **ABOUT WISPWAKE** featuring `GAME WORLD`, `STORY`, and a clickable external link to `https://github.com/rawsushies/wispwake`.
+- **Expanded Narrative & Pip Dialogue (`dialogueData.ts`, `DialogueManager.ts`)**:
+  - Expanded to 46 authored Pip story lines, environmental mechanic callouts, midpoint lore revelations, and 8 optional Memory Echoes.
 
 ### Fixed
-- **Nima Running Animation (`CharacterArtManager.ts`)**:
-  - Replaced the Milestone 3 lower-body slicing run cycle with a full-body pose-interpolated 10-frame running cycle built from dedicated contact and passing stride pose masters (`nima_run_contact_pose`, `nima_run_passing_pose`).
-- **Checkpoint Respawn Reliability (`Player.ts`, `Checkpoint.ts`, `GameplayScene.ts`)**:
-  - Fixed the bug where Nima spawned partially inside a platform and fell through after checkpoint respawn by computing exact safe center Y coordinates from platform top surfaces (`Player.getSafeCenterYForPlatformTop`), calling `body.reset(safeX, safeY)`, clearing velocity/input state, and granting `0.85s` respawn protection.
-
-### Removed
-- Removed unused `@google/genai` package and stale Gemini metadata from `metadata.json` and `.env.example`.
+- **Bug Priority A — Nima Running Animation (`CharacterArtManager.ts`)**:
+  - Fixed character proportion/height shrinking and design mismatch during running by locking Nima's upper body/head/hair/cloak/seed to `nima_side_gameplay_master`, cleanly masking out the standing legs below the tunic hem, and rendering a 10-frame biomechanical articulated leg stride (`Contact`, `Downward`, `Passing`, `High Point`, `Recovery`) with independent Front and Rear legs and dynamic cloak tail.
+- **Bug Priority B — Wake Glow Rectangular Boundary (`CharacterArtManager.ts`, `AtlasBuilder.ts`, `WakeSystem.ts`, `LightingSystem.ts`)**:
+  - Eliminated rectangular glow boundaries by strictly clipping all sprite-sheet cells (`ctx.clip()`), bounding sprite-local radial halos well inside cell edges, replacing the square-textured `vfx_wake_ring` with pure vector circular multi-band `Phaser.GameObjects.Graphics` waves, and overscanning the `512×288` dynamic lightmap.
+- **Bug Priority C — Jellyfish / Drifter Instability (`Drifter.ts`, `Player.ts`, `GameplayScene.ts`)**:
+  - Eliminated dual-authority movement jitter by setting `drifter.body.moves = false` and carrying Nima smoothly in both X (`deltaX`) and Y (`surfaceTopY`) via `player.carryOnMovingSurface(deltaX, body.top)`.
+- **Bug Priority D — Multi-Checkpoint & Respawn Reliability (`Checkpoint.ts`, `SaveManager.ts`, `GameplayScene.ts`)**:
+  - Added support for 4 checkpoints per chapter with `spawnX` clamped strictly inside the supporting platform's bounds and `spawnY` calibrated 4px above `platformTopY`.
 
 ---
 
+## [0.4.0] — Milestone 4: Campaign, Companion, Lighting & Platform Expansion
+- Added initial 4-chapter campaign structure, Wake Trials prototype, Pip speech bubbles, hybrid 2D/2.5D lighting, and mobile/tablet touch controls.
+
 ## [0.3.0] — Milestone 3: Visual & Character Overhaul
-- Rebuilt Nima and Pip from canonical side-profile master artwork with background chroma/luma keying.
-- Upgraded environment to a 6-layer parallax system with birds, canopy wisps, hanging vines, and player-reactive surface ferns.
-- Replaced rectangular blocks with organic root and mossy stone formations (`TerrainVisualAssembler.ts`).
-- Removed developer telemetry and AI studio drawers from player-facing UI.
+- Rebuilt Nima and Pip from canonical side-profile master artwork and upgraded the 6-layer parallax environment.
 
 ## [0.2.0] — Milestone 1 & 2: Core Movement & Wake Vertical Slice
-- Implemented Phaser 3.87 Arcade Physics controller for Nima (`coyoteTime`, `jumpBuffer`, variable jump height) and spring-damper companion Pip.
-- Implemented `WakeSystem` radial pulse mechanic and `BloomPlatform`, `RootBridge`, `Drifter`, `Checkpoint`, and `AncientBloom`.
+- Implemented Phaser 3.87 Arcade Physics controller for Nima and Pip, `WakeSystem`, `BloomPlatform`, `RootBridge`, `Drifter`, `Checkpoint`, and `AncientBloom`.

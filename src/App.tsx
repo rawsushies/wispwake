@@ -17,6 +17,7 @@ import {
   ArrowRight,
   ArrowUp,
   Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import { GameplayScene } from './game/scenes/GameplayScene';
 import {
@@ -25,6 +26,7 @@ import {
   DEFAULT_SETTINGS,
   GENERATED_ASSETS,
   LightingQuality,
+  StoryDifficulty,
   TelemetrySnapshot,
   TrialDifficulty,
 } from './game/config/gameConfig';
@@ -35,12 +37,61 @@ import { SaveManager, WispwakeSaveDataV2 } from './game/systems/SaveManager';
 import { AudioManager } from './game/systems/AudioManager';
 
 type ShellState = 'TITLE_MENU' | 'PLAYING' | 'PAUSED' | 'VICTORY';
+type PlayModalTab = 'story' | 'trials';
 
 const CHAPTER_ART_MAP: Record<CampaignChapterId, string> = {
   sleeping_canopy: GENERATED_ASSETS.bgCanopyFarSky,
   moonlit_marsh: GENERATED_ASSETS.bgMoonlitMarsh,
   hollow_below: GENERATED_ASSETS.bgHollowBelow,
   windward_ruins: GENERATED_ASSETS.bgWindwardRuins,
+};
+
+const STORY_DIFFICULTY_INFO: Record<
+  StoryDifficulty,
+  { label: string; summary: string }
+> = {
+  easy: {
+    label: 'Easy',
+    summary: 'Generous 6.8s Bloom platforms, 1.35s crumbling ledges, calmer Drifters, and fewer hazards.',
+  },
+  medium: {
+    label: 'Medium',
+    summary: 'Canonical Veilgrove balance: 5.2s Bloom platforms, 0.95s crumbling ledges, and all 4 checkpoints.',
+  },
+  hard: {
+    label: 'Hard',
+    summary: 'Crisp 4.1s Bloom chaining, 0.72s crumbling ledges, faster Spore Vents, and brisker Drifters.',
+  },
+  extreme: {
+    label: 'Extreme',
+    summary: 'Mastery 3.35s Bloom windows, 0.56s crumbling ledges, rapid vents, and 2 checkpoints per chapter.',
+  },
+};
+
+const TRIAL_DIFFICULTY_INFO: Record<
+  TrialDifficulty,
+  { label: string; segments: string; summary: string }
+> = {
+  easy: {
+    label: 'Easy',
+    segments: '12–16 Segments',
+    summary: 'Wide landing roots, 6.4s Bloom duration, gentle Drifter transfers, and 3 checkpoints.',
+  },
+  medium: {
+    label: 'Medium',
+    segments: '16–20 Segments',
+    summary: 'Chained Blooms, double Drifter transfers, water currents, spore vents, and 3 checkpoints.',
+  },
+  hard: {
+    label: 'Hard',
+    segments: '22–26 Segments',
+    summary: 'All 15 archetypes including falling stalactites, narrow vertical ascents, and mastery gauntlets.',
+  },
+  extreme: {
+    label: 'Extreme',
+    segments: '28–36 Segments',
+    summary: 'Endurance course with 3.5s Blooms, 0.62s crumbling ledges, rapid vents, and 4 checkpoints.',
+  },
 };
 
 export default function App() {
@@ -54,12 +105,16 @@ export default function App() {
     () => SaveManager.get().settings || DEFAULT_SETTINGS
   );
 
-  const [showChaptersModal, setShowChaptersModal] = useState(false);
-  const [showTrialsModal, setShowTrialsModal] = useState(false);
+  // Combined Play Selection Modal (Story Journey + Wake Trials)
+  const [showPlayModal, setShowPlayModal] = useState(false);
+  const [activePlayTab, setActivePlayTab] = useState<PlayModalTab>('story');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [showFirstPlayHint, setShowFirstPlayHint] = useState(true);
 
+  const [selectedStoryDiff, setSelectedStoryDiff] = useState<StoryDifficulty>(
+    () => SaveManager.getStoryDifficulty()
+  );
   const [selectedTrialDiff, setSelectedTrialDiff] = useState<TrialDifficulty>('medium');
   const [customTrialSeed, setCustomTrialSeed] = useState<string>(() =>
     WakeTrialsGenerator.generateSeedCode('medium')
@@ -83,20 +138,28 @@ export default function App() {
     animState: 'idle',
     chapterId: 'sleeping_canopy',
     chapterTitle: 'Chapter 01 · The Sleeping Canopy',
-    currentBeatTitle: 'Beat 1 · Awakening — Move with A/D or Arrows. Hold Space or Z for a higher jump.',
+    currentBeatTitle:
+      '01 · The First Awakening — Move with A/D or Arrows. Hold Space or Z for a higher jump.',
     currentBeatIndex: 1,
     activeCheckpointId: null,
+    unlockedCheckpointsCount: 0,
+    totalCheckpointsCount: 4,
     restoredCount: 0,
-    totalRestorable: 4,
+    totalRestorable: 9,
+    discoveredMemoriesCount: 0,
+    totalMemoriesCount: 2,
     chapterCompleted: false,
     activeDialogue: null,
+    storyDifficulty: 'medium',
     trialElapsedSec: 0,
     trialSeed: null,
     trialDifficulty: null,
   });
 
   const refreshSaveSnapshot = useCallback(() => {
-    setSaveState({ ...SaveManager.get() });
+    const latest = SaveManager.get();
+    setSaveState({ ...latest });
+    setSelectedStoryDiff(latest.storyDifficulty || 'medium');
   }, []);
 
   useEffect(() => {
@@ -113,7 +176,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (shellState === 'PLAYING' && telemetry.playerX > 360 && showFirstPlayHint) {
+    if (shellState === 'PLAYING' && telemetry.playerX > 420 && showFirstPlayHint) {
       setShowFirstPlayHint(false);
     }
   }, [shellState, telemetry.playerX, showFirstPlayHint]);
@@ -201,34 +264,68 @@ export default function App() {
     };
   }, [handleTogglePause, handleToggleDebug, refreshSaveSnapshot]);
 
+  // Keyboard navigation for Title Screen (Enter/Space opens Play Selection; Escape closes active modal)
   useEffect(() => {
-    if (
-      shellState !== 'TITLE_MENU' ||
-      showChaptersModal ||
-      showTrialsModal ||
-      showSettingsModal ||
-      showCreditsModal
-    ) {
-      return;
-    }
+    const onModalOrTitleKey = (e: KeyboardEvent) => {
+      if (e.code === 'Escape') {
+        if (showPlayModal) {
+          e.preventDefault();
+          setShowPlayModal(false);
+          return;
+        }
+        if (showSettingsModal) {
+          e.preventDefault();
+          setShowSettingsModal(false);
+          return;
+        }
+        if (showCreditsModal) {
+          e.preventDefault();
+          setShowCreditsModal(false);
+          return;
+        }
+      }
 
-    const onTitleKey = (e: KeyboardEvent) => {
-      if (e.code === 'Enter' || e.code === 'Space') {
+      if (
+        shellState === 'TITLE_MENU' &&
+        !showPlayModal &&
+        !showSettingsModal &&
+        !showCreditsModal &&
+        (e.code === 'Enter' || e.code === 'Space')
+      ) {
         e.preventDefault();
-        startCampaignChapter(SaveManager.get().currentChapterId, false);
+        refreshSaveSnapshot();
+        setActivePlayTab('story');
+        setShowPlayModal(true);
       }
     };
-    window.addEventListener('keydown', onTitleKey);
-    return () => window.removeEventListener('keydown', onTitleKey);
-  }, [shellState, showChaptersModal, showTrialsModal, showSettingsModal, showCreditsModal]);
+    window.addEventListener('keydown', onModalOrTitleKey);
+    return () => window.removeEventListener('keydown', onModalOrTitleKey);
+  }, [shellState, showPlayModal, showSettingsModal, showCreditsModal, refreshSaveSnapshot]);
 
-  const startCampaignChapter = (chapterId: CampaignChapterId, resetChapter = false) => {
+  const handleStoryDifficultyChange = (diff: StoryDifficulty) => {
+    SaveManager.setStoryDifficulty(diff);
+    setSelectedStoryDiff(diff);
+    refreshSaveSnapshot();
+  };
+
+  const startCampaignChapter = (
+    chapterId: CampaignChapterId,
+    resetChapter = false,
+    difficultyOverride?: StoryDifficulty
+  ) => {
+    const chapState = SaveManager.getChapterProgress(chapterId);
+    if (!chapState.unlocked) {
+      return; // Never allow locked chapters to launch (Section 06)
+    }
+
+    const diffToUse = difficultyOverride || selectedStoryDiff;
+    SaveManager.setStoryDifficulty(diffToUse);
+
     setShowFirstPlayHint(true);
-    setShowChaptersModal(false);
-    setShowTrialsModal(false);
+    setShowPlayModal(false);
     setLastCompletedTrialTime(null);
     if (sceneRef.current) {
-      sceneRef.current.loadCampaignChapter(chapterId, resetChapter);
+      sceneRef.current.loadCampaignChapter(chapterId, resetChapter, diffToUse);
       sceneRef.current.setAttractMode(false);
       sceneRef.current.setPausedState(false);
     }
@@ -243,8 +340,7 @@ export default function App() {
         : WakeTrialsGenerator.generateSeedCode(difficulty);
     setCustomTrialSeed(cleanSeed);
     setSelectedTrialDiff(difficulty);
-    setShowTrialsModal(false);
-    setShowChaptersModal(false);
+    setShowPlayModal(false);
     setShowFirstPlayHint(false);
     setLastCompletedTrialTime(null);
 
@@ -297,6 +393,7 @@ export default function App() {
       (settings.touchControlsMode === 'auto' && isTouchDevice));
 
   const completedTrialsCount = Object.values(saveState.trials).filter(Boolean).length;
+  const currentActiveChapterDef = getCampaignChapter(saveState.currentChapterId);
 
   return (
     <div className="relative w-screen h-screen bg-[#121B2B] overflow-hidden select-none">
@@ -312,7 +409,8 @@ export default function App() {
       )}
 
       {/* =========================================================
-          1. CLEAN PLAYER-FACING TITLE SCREEN OVERLAY
+          1. CLEAN PLAYER-FACING TITLE SCREEN OVERLAY (Section 06)
+          EXACTLY THREE PRIMARY BUTTONS: PLAY, SETTINGS, CREDITS
       ========================================================= */}
       {shellState === 'TITLE_MENU' && (
         <div className="absolute inset-0 z-20 flex flex-col justify-between p-6 md:p-12 pointer-events-none bg-gradient-to-t from-[#121B2B]/90 via-[#121B2B]/30 to-[#121B2B]/65">
@@ -332,11 +430,11 @@ export default function App() {
             </button>
           </div>
 
-          {/* Center-Left Bespoke Inline SVG Title Lockup over negative space */}
-          <div className="max-w-xl my-auto space-y-5 pointer-events-auto">
+          {/* Center-Left Bespoke Inline SVG Title Lockup */}
+          <div className="max-w-xl my-auto space-y-6 pointer-events-auto">
             <div className="space-y-2">
               <div className="text-xs tracking-widest text-[#8FE7C7] font-medium uppercase">
-                {getCampaignChapter(saveState.currentChapterId).title}
+                {currentActiveChapterDef.title}
               </div>
 
               <svg
@@ -398,57 +496,46 @@ export default function App() {
               </svg>
 
               <p className="text-sm text-[#E6EFEA]/90 max-w-md leading-relaxed pt-1">
-                Journey through four biomes of the Veilgrove alongside Pip. Release a gentle pulse of{' '}
-                <span className="text-[#8FE7C7] font-medium">Wake</span> to unfurl sleeping blooms, uncoil ancient root bridges, and restore light to a world lost to the Stillness.
+                Journey through four vast regions of the Veilgrove alongside Pip. Release a gentle pulse of{' '}
+                <span className="text-[#8FE7C7] font-medium">Wake</span> to unfurl sleeping blooms, uncoil ancient root bridges, and restore light to a world hushed by the Stillness.
               </p>
             </div>
 
-            {/* Primary & Secondary Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            {/* Section 06: EXACTLY THREE PRIMARY BUTTONS ON THE TITLE SCREEN */}
+            <div
+              className="flex flex-wrap items-center gap-3 pt-1"
+              role="navigation"
+              aria-label="Primary Title Navigation"
+            >
               <button
-                onClick={() => startCampaignChapter(saveState.currentChapterId, false)}
-                className="flex items-center gap-2.5 px-6 py-3 rounded-lg bg-[#F1C878] hover:bg-[#f7d894] text-[#121B2B] font-semibold text-sm shadow-lg transition-transform active:scale-95 whitespace-nowrap shrink-0"
+                data-testid="title-btn-play"
+                onClick={() => {
+                  refreshSaveSnapshot();
+                  setActivePlayTab('story');
+                  setShowPlayModal(true);
+                }}
+                className="flex items-center gap-2.5 px-7 py-3.5 rounded-lg bg-[#F1C878] hover:bg-[#f7d894] text-[#121B2B] font-semibold text-sm tracking-wide shadow-lg transition-transform active:scale-95 whitespace-nowrap shrink-0"
               >
                 <Play className="w-4 h-4 fill-current" />
-                <span>Play Story</span>
+                <span>PLAY</span>
               </button>
 
               <button
-                onClick={() => {
-                  refreshSaveSnapshot();
-                  setShowChaptersModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
-              >
-                <Compass className="w-4 h-4 text-[#8FE7C7]" />
-                <span>Chapters (4)</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  refreshSaveSnapshot();
-                  setShowTrialsModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
-              >
-                <Sparkles className="w-4 h-4 text-[#F1C878]" />
-                <span>Wake Trials</span>
-              </button>
-
-              <button
+                data-testid="title-btn-settings"
                 onClick={() => setShowSettingsModal(true)}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
+                className="flex items-center gap-2 px-5 py-3.5 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
               >
                 <Settings className="w-4 h-4 text-[#8FE7C7]" />
-                <span>Settings</span>
+                <span>SETTINGS</span>
               </button>
 
               <button
+                data-testid="title-btn-credits"
                 onClick={() => setShowCreditsModal(true)}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
+                className="flex items-center gap-2 px-5 py-3.5 rounded-lg bg-[#1D2D43]/95 hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
               >
                 <BookOpen className="w-4 h-4 text-[#B7A2E8]" />
-                <span>Credits</span>
+                <span>CREDITS</span>
               </button>
             </div>
           </div>
@@ -458,7 +545,7 @@ export default function App() {
             <div className="font-mono-tabular">
               A/D or Left/Right Move · Space/Z Jump (Hold for Height) · E/X Wake Pulse · Touch & Gamepad Supported
             </div>
-            <div className="text-[#8FE7C7]">Press Enter or Space to Begin</div>
+            <div className="text-[#8FE7C7]">Press Enter or Space to Open Play Selection</div>
           </div>
         </div>
       )}
@@ -470,7 +557,7 @@ export default function App() {
         <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 md:p-6">
           {/* Top Perimeter Bar */}
           <div className="flex items-start justify-between gap-4">
-            {/* Left Cluster: Chapter / Wake Readiness / Trial Timer */}
+            {/* Left Cluster: Sub-Area / Wake Readiness / Checkpoints / Trial Timer */}
             <div className="flex flex-col gap-1 bg-[#121B2B]/85 border border-[#294D4D] rounded-lg px-3.5 py-2">
               <div className="flex flex-wrap items-center gap-2.5 text-xs">
                 <span className="font-semibold text-[#F1C878]">
@@ -480,6 +567,18 @@ export default function App() {
                 <span className="font-mono-tabular text-[#8FE7C7]">
                   Wake: {wakeReady ? 'Ready (E / X)' : `${telemetry.wakeCooldownRemaining.toFixed(1)}s`}
                 </span>
+                <span aria-hidden="true" className="text-[#57725B]">·</span>
+                <span className="font-mono-tabular text-[#A7B8AE]">
+                  Cairns: {telemetry.unlockedCheckpointsCount}/{telemetry.totalCheckpointsCount}
+                </span>
+                {telemetry.chapterId !== 'wake_trial' && telemetry.totalMemoriesCount > 0 && (
+                  <>
+                    <span aria-hidden="true" className="text-[#57725B]">·</span>
+                    <span className="font-mono-tabular text-[#B7A2E8]">
+                      Memories: {telemetry.discoveredMemoriesCount}/{telemetry.totalMemoriesCount}
+                    </span>
+                  </>
+                )}
                 {telemetry.chapterId === 'wake_trial' && (
                   <>
                     <span aria-hidden="true" className="text-[#57725B]">·</span>
@@ -521,14 +620,14 @@ export default function App() {
             </div>
           </div>
 
-          {/* Priority 2: Pip's Floating World-Matched Speech Bubble */}
+          {/* Pip's Floating World-Matched Speech Bubble */}
           {telemetry.activeDialogue && (
             <div
               style={{
                 left: `${(telemetry.activeDialogue.screenX / 960) * 100}%`,
                 top: `${(telemetry.activeDialogue.screenY / 540) * 100}%`,
               }}
-              className="absolute -translate-x-1/2 -translate-y-full pointer-events-auto max-w-[270px] sm:max-w-[310px] rounded-xl bg-[#121B2B]/92 border border-[#8FE7C7]/60 px-3.5 py-2.5 shadow-[0_8px_24px_rgba(18,27,43,0.9)] transition-all duration-200"
+              className="absolute -translate-x-1/2 -translate-y-full pointer-events-auto max-w-[280px] sm:max-w-[330px] rounded-xl bg-[#121B2B]/92 border border-[#8FE7C7]/60 px-3.5 py-2.5 shadow-[0_8px_24px_rgba(18,27,43,0.9)] transition-all duration-200"
             >
               <div className="flex items-center justify-between gap-3 mb-1">
                 <span className="text-[10px] font-semibold tracking-wider uppercase text-[#8FE7C7]">
@@ -549,7 +648,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Section 08: Responsive Multi-Touch Virtual Controls */}
+          {/* Responsive Multi-Touch Virtual Controls */}
           {showTouchOverlay && (
             <div className="flex items-end justify-between w-full pt-4 pb-1 px-1 pointer-events-none">
               <div className="flex items-center gap-3 pointer-events-auto">
@@ -660,12 +759,13 @@ export default function App() {
               <button
                 onClick={() => {
                   refreshSaveSnapshot();
-                  setShowChaptersModal(true);
+                  setActivePlayTab(telemetry.chapterId === 'wake_trial' ? 'trials' : 'story');
+                  setShowPlayModal(true);
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#121B2B] hover:bg-[#294D4D] border border-[#294D4D] text-[#E6EFEA] font-medium text-sm transition-colors"
               >
                 <Compass className="w-4 h-4 text-[#8FE7C7]" />
-                <span>Switch Chapter</span>
+                <span>Story Journey & Wake Trials</span>
               </button>
 
               <button
@@ -733,15 +833,17 @@ export default function App() {
             ) : (
               <div className="space-y-1.5 text-center">
                 <div className="text-xs font-medium tracking-widest text-[#8FE7C7] uppercase">
-                  {telemetry.chapterTitle} · RESTORED
+                  {telemetry.chapterTitle} · RESTORED ({telemetry.storyDifficulty.toUpperCase()})
                 </div>
                 <h2 className="text-3xl font-semibold text-[#F1C878] font-serif-display">
                   {unlockedNextChapterId
                     ? 'Light Reaches Deeper into the Veilgrove'
-                    : 'The Heart of the Veilgrove Awakens'}
+                    : 'The Great Crown Bloom Unites the Veilgrove'}
                 </h2>
                 <p className="text-xs text-[#E6EFEA]/90 leading-relaxed max-w-md mx-auto">
-                  As Nima’s seed resonates with the Ancient Bloom, golden light washes across the sleeping roots and opens the path forward.
+                  {unlockedNextChapterId
+                    ? 'As Nima’s seed resonates with the Ancient Bloom, golden sap-light washes across the sleeping boughs and unlocks the next region of the journey.'
+                    : 'From the deepest root-heart to the highest windward spire, the Stillness parts at last. Nima and Pip watch the entire Veilgrove awaken in living gold and mint light.'}
                 </p>
               </div>
             )}
@@ -789,187 +891,285 @@ export default function App() {
       )}
 
       {/* =========================================================
-          5. CAMPAIGN CHAPTER SELECTION MODAL (Section 04)
+          5. COMBINED PLAY SELECTION INTERFACE (Section 06)
+          Contains A. STORY JOURNEY + B. WAKE TRIALS
       ========================================================= */}
-      {showChaptersModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/90 p-4 pointer-events-auto">
-          <div className="w-full max-w-2xl rounded-xl bg-[#1D2D43] border border-[#294D4D] p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#294D4D] pb-3">
+      {showPlayModal && (
+        <div
+          data-testid="play-selection-modal"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/92 p-4 pointer-events-auto"
+        >
+          <div className="w-full max-w-3xl rounded-xl bg-[#1D2D43] border border-[#294D4D] p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+            {/* Header & Mode Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#294D4D] pb-3.5">
               <div>
                 <h3 className="text-2xl font-semibold text-[#F1C878] font-serif-display">
-                  Story Campaign · The Veilgrove Chronicles
+                  Select Your Journey
                 </h3>
                 <p className="text-xs text-[#A7B8AE]">
-                  Complete each chapter’s Ancient Bloom to unlock the next region, or select any chapter to explore.
+                  Embark on the 4-chapter Story Journey or test your mastery in procedural Wake Trials.
                 </p>
               </div>
-              <button
-                onClick={() => setShowChaptersModal(false)}
-                className="px-3 py-1 rounded bg-[#294D4D] hover:bg-[#57725B] text-xs text-[#E6EFEA]"
-              >
-                Close
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {CAMPAIGN_CHAPTERS.map((def) => {
-                const chapId = def.chapterId;
-                const state = saveState.chapters[chapId];
-                const isUnlocked = Boolean(state?.unlocked);
-                const isCompleted = Boolean(state?.completed);
-
-                return (
-                  <div
-                    key={chapId}
-                    className={`rounded-lg border p-3.5 flex flex-col justify-between gap-3 transition-colors ${
-                      isUnlocked
-                        ? 'bg-[#121B2B]/90 border-[#294D4D] hover:border-[#8FE7C7]/60'
-                        : 'bg-[#121B2B]/50 border-[#294D4D]/50 opacity-85'
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="aspect-video rounded overflow-hidden border border-[#294D4D] relative">
-                        <img
-                          src={CHAPTER_ART_MAP[chapId]}
-                          alt={def.title}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded bg-[#121B2B]/85 text-[10px] font-medium">
-                          {isCompleted ? (
-                            <span className="text-[#F1C878] flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Restored
-                            </span>
-                          ) : isUnlocked ? (
-                            <span className="text-[#8FE7C7]">Unlocked</span>
-                          ) : (
-                            <span className="text-[#A7B8AE] flex items-center gap-1">
-                              <Lock className="w-3 h-3" /> Locked
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-semibold text-[#F1C878]">{def.title}</div>
-                        <div className="text-[11px] text-[#A7B8AE]">{def.regionSubtitle}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => startCampaignChapter(chapId, false)}
-                        className="flex-1 py-2 px-3 rounded bg-[#8FE7C7] hover:bg-[#a6f0d6] text-[#121B2B] font-semibold text-xs transition-colors"
-                      >
-                        {isUnlocked ? 'Play Chapter' : 'Unlock & Play'}
-                      </button>
-                      {isCompleted && (
-                        <button
-                          onClick={() => startCampaignChapter(chapId, true)}
-                          className="py-2 px-2.5 rounded bg-[#1D2D43] hover:bg-[#294D4D] border border-[#294D4D] text-[#A7B8AE] hover:text-white text-xs"
-                          title="Reset & Replay Chapter"
-                        >
-                          Replay
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================
-          6. PROCEDURAL CHALLENGE MODE MODAL — WAKE TRIALS (Section 05)
-      ========================================================= */}
-      {showTrialsModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/90 p-4 pointer-events-auto">
-          <div className="w-full max-w-lg rounded-xl bg-[#1D2D43] border border-[#294D4D] p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#294D4D] pb-3">
-              <div>
-                <h3 className="text-2xl font-semibold text-[#F1C878] font-serif-display">
-                  Wake Trials · Procedural Challenge Mode
-                </h3>
-                <p className="text-xs text-[#A7B8AE]">
-                  Deterministic seeded platforming courses verified by the physics traversability validator.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowTrialsModal(false)}
-                className="px-3 py-1 rounded bg-[#294D4D] hover:bg-[#57725B] text-xs text-[#E6EFEA]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-[#E6EFEA]">Select Difficulty Tier</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(['easy', 'medium', 'hard', 'extreme'] as TrialDifficulty[]).map((diff) => {
-                  const rec = saveState.trials[diff];
-                  const active = selectedTrialDiff === diff;
-                  return (
-                    <button
-                      key={diff}
-                      onClick={() => {
-                        setSelectedTrialDiff(diff);
-                        setCustomTrialSeed(WakeTrialsGenerator.generateSeedCode(diff));
-                      }}
-                      className={`p-2.5 rounded-lg border text-left transition-colors ${
-                        active
-                          ? 'bg-[#294D4D] border-[#F1C878] text-[#F1C878]'
-                          : 'bg-[#121B2B]/80 border-[#294D4D] text-[#E6EFEA] hover:border-[#8FE7C7]/50'
-                      }`}
-                    >
-                      <div className="text-xs font-semibold capitalize">{diff}</div>
-                      <div className="text-[10px] font-mono-tabular text-[#8FE7C7] mt-0.5">
-                        {rec ? `Best: ${rec.bestTimeSec.toFixed(1)}s` : 'No record'}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-[#E6EFEA]">Trial Seed (Shareable & Deterministic)</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customTrialSeed}
-                  onChange={(e) => setCustomTrialSeed(e.target.value.toUpperCase())}
-                  placeholder="E.G. ME-48219"
-                  className="flex-1 px-3 py-2 rounded-lg bg-[#121B2B] border border-[#294D4D] text-xs font-mono-tabular text-[#E6EFEA] focus:outline-none focus:border-[#8FE7C7]"
-                />
                 <button
-                  type="button"
-                  onClick={() => setCustomTrialSeed(WakeTrialsGenerator.generateSeedCode(selectedTrialDiff))}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#121B2B] hover:bg-[#294D4D] border border-[#294D4D] text-xs text-[#8FE7C7]"
+                  data-testid="tab-story-journey"
+                  onClick={() => setActivePlayTab('story')}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    activePlayTab === 'story'
+                      ? 'bg-[#F1C878] text-[#121B2B]'
+                      : 'bg-[#121B2B] text-[#E6EFEA] hover:bg-[#294D4D]'
+                  }`}
                 >
-                  <Shuffle className="w-3.5 h-3.5" />
-                  <span>Randomize</span>
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>STORY JOURNEY</span>
+                </button>
+
+                <button
+                  data-testid="tab-wake-trials"
+                  onClick={() => setActivePlayTab('trials')}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    activePlayTab === 'trials'
+                      ? 'bg-[#F1C878] text-[#121B2B]'
+                      : 'bg-[#121B2B] text-[#E6EFEA] hover:bg-[#294D4D]'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>WAKE TRIALS</span>
+                </button>
+
+                <button
+                  onClick={() => setShowPlayModal(false)}
+                  className="px-3 py-2 rounded-lg bg-[#294D4D] hover:bg-[#57725B] text-xs text-[#E6EFEA] ml-1"
+                >
+                  Close (Esc)
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#294D4D] text-xs text-[#A7B8AE]">
-              <span>Tiers Completed: {completedTrialsCount} / 4</span>
-              <button
-                onClick={() => launchWakeTrial(selectedTrialDiff, customTrialSeed)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#F1C878] hover:bg-[#f7d894] text-[#121B2B] font-semibold text-xs shadow-lg"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Launch Trial</span>
-              </button>
-            </div>
+            {/* TAB A: STORY JOURNEY */}
+            {activePlayTab === 'story' && (
+              <div className="space-y-4">
+                {/* Quick Continue Banner + Story Difficulty Selector */}
+                <div className="rounded-lg bg-[#121B2B]/90 border border-[#294D4D] p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[#8FE7C7]">
+                      Active Campaign Progress · {saveState.discoveredMemoryIds.length} / 8 Memory Echoes Found
+                    </div>
+                    <div className="text-sm font-semibold text-[#F1C878]">
+                      {currentActiveChapterDef.title}
+                    </div>
+                    <div className="text-xs text-[#A7B8AE]">
+                      {STORY_DIFFICULTY_INFO[selectedStoryDiff].summary}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {(['easy', 'medium', 'hard', 'extreme'] as StoryDifficulty[]).map((diff) => (
+                      <button
+                        key={diff}
+                        onClick={() => handleStoryDifficultyChange(diff)}
+                        className={`px-2.5 py-1.5 rounded border text-xs font-medium capitalize transition-colors ${
+                          selectedStoryDiff === diff
+                            ? 'bg-[#294D4D] border-[#F1C878] text-[#F1C878]'
+                            : 'bg-[#1D2D43] border-[#294D4D] text-[#A7B8AE] hover:text-[#E6EFEA]'
+                        }`}
+                      >
+                        {diff}
+                      </button>
+                    ))}
+
+                    <button
+                      data-testid="continue-journey-btn"
+                      onClick={() => startCampaignChapter(saveState.currentChapterId, false)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#F1C878] hover:bg-[#f7d894] text-[#121B2B] font-semibold text-xs shadow transition-colors ml-1"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Continue Journey</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 Campaign Chapter Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {CAMPAIGN_CHAPTERS.map((def) => {
+                    const chapId = def.chapterId;
+                    const state = saveState.chapters[chapId];
+                    const isUnlocked = Boolean(state?.unlocked);
+                    const isCompleted = Boolean(state?.completed);
+                    const unlockedCairnsCount = state?.unlockedCheckpointIds?.length || 0;
+                    const totalCairnsCount = def.checkpoints?.length || 4;
+
+                    return (
+                      <div
+                        key={chapId}
+                        data-testid={`chapter-card-${chapId}`}
+                        className={`rounded-lg border p-3.5 flex flex-col justify-between gap-3 transition-colors ${
+                          isUnlocked
+                            ? 'bg-[#121B2B]/90 border-[#294D4D] hover:border-[#8FE7C7]/60'
+                            : 'bg-[#121B2B]/45 border-[#294D4D]/40 opacity-75'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="aspect-video rounded overflow-hidden border border-[#294D4D] relative">
+                            <img
+                              src={CHAPTER_ART_MAP[chapId]}
+                              alt={def.title}
+                              referrerPolicy="no-referrer"
+                              className={`w-full h-full object-cover ${!isUnlocked ? 'grayscale contrast-75' : ''}`}
+                            />
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-[#121B2B]/85 text-[10px] font-mono-tabular text-[#E6EFEA]">
+                              10 Sub-Areas · {unlockedCairnsCount}/{totalCairnsCount} Cairns
+                            </div>
+                            <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded bg-[#121B2B]/85 text-[10px] font-medium">
+                              {isCompleted ? (
+                                <span className="text-[#F1C878] flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> Restored
+                                </span>
+                              ) : isUnlocked ? (
+                                <span className="text-[#8FE7C7]">Unlocked</span>
+                              ) : (
+                                <span className="text-[#A7B8AE] flex items-center gap-1">
+                                  <Lock className="w-3 h-3" /> Locked
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm font-semibold text-[#F1C878]">{def.title}</div>
+                            <div className="text-[11px] text-[#8FE7C7]">{def.regionSubtitle}</div>
+                            <p className="text-[11px] text-[#A7B8AE] leading-snug mt-1">
+                              {def.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          {isUnlocked ? (
+                            <>
+                              <button
+                                data-testid={`start-chapter-${chapId}`}
+                                onClick={() => startCampaignChapter(chapId, false)}
+                                className="flex-1 py-2 px-3 rounded bg-[#8FE7C7] hover:bg-[#a6f0d6] text-[#121B2B] font-semibold text-xs transition-colors"
+                              >
+                                {state?.activeCheckpointId ? 'Resume Chapter' : 'Start Chapter'}
+                              </button>
+                              {(isCompleted || state?.activeCheckpointId) && (
+                                <button
+                                  onClick={() => startCampaignChapter(chapId, true)}
+                                  className="py-2 px-2.5 rounded bg-[#1D2D4D] hover:bg-[#294D4D] border border-[#294D4D] text-[#A7B8AE] hover:text-white text-xs"
+                                  title="Reset & Replay Chapter from Beginning"
+                                >
+                                  Replay
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              data-testid={`locked-chapter-${chapId}`}
+                              disabled
+                              className="w-full py-2 px-3 rounded bg-[#1D2D43]/60 border border-[#294D4D]/50 text-[#A7B8AE] font-medium text-xs cursor-not-allowed flex items-center justify-center gap-1.5"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Restore Previous Chapter to Unlock</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB B: WAKE TRIALS */}
+            {activePlayTab === 'trials' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-[#E6EFEA]">
+                    Select Wake Trial Difficulty Tier (15 Curated Archetypes · Simulation Verified)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {(['easy', 'medium', 'hard', 'extreme'] as TrialDifficulty[]).map((diff) => {
+                      const rec = saveState.trials[diff];
+                      const info = TRIAL_DIFFICULTY_INFO[diff];
+                      const active = selectedTrialDiff === diff;
+                      return (
+                        <button
+                          key={diff}
+                          data-testid={`trial-diff-${diff}`}
+                          onClick={() => {
+                            setSelectedTrialDiff(diff);
+                            setCustomTrialSeed(WakeTrialsGenerator.generateSeedCode(diff));
+                          }}
+                          className={`p-3 rounded-lg border text-left transition-colors ${
+                            active
+                              ? 'bg-[#294D4D] border-[#F1C878] text-[#F1C878]'
+                              : 'bg-[#121B2B]/85 border-[#294D4D] text-[#E6EFEA] hover:border-[#8FE7C7]/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wider">
+                              {info.label} · {info.segments}
+                            </span>
+                            <span className="text-[11px] font-mono-tabular text-[#8FE7C7]">
+                              {rec ? `Best: ${rec.bestTimeSec.toFixed(1)}s` : 'No record'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#A7B8AE] mt-1 leading-snug">
+                            {info.summary}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-[#E6EFEA]">
+                    Trial Seed (Shareable & Deterministic)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={customTrialSeed}
+                      onChange={(e) => setCustomTrialSeed(e.target.value.toUpperCase())}
+                      placeholder="E.G. ME-48219"
+                      className="flex-1 px-3 py-2 rounded-lg bg-[#121B2B] border border-[#294D4D] text-xs font-mono-tabular text-[#E6EFEA] focus:outline-none focus:border-[#8FE7C7]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCustomTrialSeed(WakeTrialsGenerator.generateSeedCode(selectedTrialDiff))
+                      }
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#121B2B] hover:bg-[#294D4D] border border-[#294D4D] text-xs text-[#8FE7C7]"
+                    >
+                      <Shuffle className="w-3.5 h-3.5" />
+                      <span>Randomize Seed</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-[#294D4D] text-xs text-[#A7B8AE]">
+                  <span>Tiers Completed: {completedTrialsCount} / 4</span>
+                  <button
+                    data-testid="launch-wake-trial-btn"
+                    onClick={() => launchWakeTrial(selectedTrialDiff, customTrialSeed)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#F1C878] hover:bg-[#f7d894] text-[#121B2B] font-semibold text-xs shadow-lg"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Launch Wake Trial</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* =========================================================
-          7. SETTINGS & ACCESSIBILITY MODAL
+          6. SETTINGS & ACCESSIBILITY MODAL
       ========================================================= */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/90 p-4 pointer-events-auto">
@@ -1023,7 +1223,7 @@ export default function App() {
                 />
               </div>
 
-              {/* Section 07: Dynamic Lighting Quality */}
+              {/* Dynamic Lighting Quality */}
               <div className="pt-2 border-t border-[#294D4D]">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[#E6EFEA] font-medium">Dynamic 2.5D Lighting Quality</span>
@@ -1046,7 +1246,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Section 08: Touch Controls Mode */}
+              {/* Touch Controls Mode */}
               <div className="pt-2 border-t border-[#294D4D]">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[#E6EFEA] font-medium">On-Screen Touch Controls</span>
@@ -1126,15 +1326,23 @@ export default function App() {
       )}
 
       {/* =========================================================
-          8. WORLD LORE & CREDITS MODAL
+          7. CREDITS — ABOUT WISPWAKE MODAL (Section 22)
       ========================================================= */}
       {showCreditsModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/90 p-4 pointer-events-auto">
-          <div className="w-full max-w-lg rounded-xl bg-[#1D2D43] border border-[#294D4D] p-6 space-y-4 shadow-2xl">
+        <div
+          data-testid="about-wispwake-modal"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#121B2B]/92 p-4 pointer-events-auto"
+        >
+          <div className="w-full max-w-xl rounded-xl bg-[#1D2D43] border border-[#294D4D] p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#294D4D] pb-3">
-              <h3 className="text-2xl font-semibold text-[#F1C878] font-serif-display">
-                Wispwake · World & Credits
-              </h3>
+              <div>
+                <div className="text-[11px] font-semibold tracking-widest uppercase text-[#8FE7C7]">
+                  CREDITS & LORE
+                </div>
+                <h3 className="text-2xl font-semibold text-[#F1C878] font-serif-display">
+                  ABOUT WISPWAKE
+                </h3>
+              </div>
               <button
                 onClick={() => setShowCreditsModal(false)}
                 className="px-3 py-1 rounded bg-[#294D4D] hover:bg-[#57725B] text-xs text-[#E6EFEA]"
@@ -1143,25 +1351,52 @@ export default function App() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
               <img
                 src={GENERATED_ASSETS.refNimaPipConcept}
                 alt="Nima and Pip Concept Illustration"
                 referrerPolicy="no-referrer"
                 className="w-full rounded-lg border border-[#294D4D] object-cover aspect-square"
               />
-              <div className="sm:col-span-2 space-y-2 text-xs text-[#E6EFEA]/90 leading-relaxed">
-                <p>
-                  <strong className="text-[#F1C878]">The Veilgrove:</strong> An immense living ecosystem grown around an ancient tree whose branches reach into a twilight sky and whose flora respond to an energy called the{' '}
-                  <span className="text-[#8FE7C7]">Wake</span>.
-                </p>
-                <p>
-                  <strong className="text-[#F1C878]">Nima & Pip:</strong> Nima awakens on a vast tree root carrying a warm living seed, joined by Pip, a moth-like light creature drawn to its gentle resonance.
-                </p>
-                <p className="text-[#A7B8AE]">
-                  Open-source release at{' '}
-                  <span className="text-[#8FE7C7] font-mono-tabular">github.com/rawsushies/wispwake</span>.
-                </p>
+
+              <div className="sm:col-span-2 space-y-3.5 text-xs text-[#E6EFEA]/90 leading-relaxed">
+                {/* 1. GAME WORLD */}
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold tracking-wider uppercase text-[#F1C878]">
+                    GAME WORLD
+                  </h4>
+                  <p>
+                    The <span className="text-[#8FE7C7] font-medium">Veilgrove</span> is a vast living forest grown around an ancient colossal tree whose roots drink from moonlit wetlands and subterranean caverns while its crown touches the open sky. When the protective slumber known as the{' '}
+                    <span className="text-[#B7A2E8] font-medium">Stillness</span> hushed the world, Nima awoke carrying a warm living seed alongside Pip, a luminous moth-like wisp drawn to its pulse.
+                  </p>
+                </div>
+
+                {/* 2. STORY */}
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold tracking-wider uppercase text-[#F1C878]">
+                    STORY
+                  </h4>
+                  <p>
+                    Guided by Pip’s light, Nima journeys across four interconnected regions—waking the first boughs of the{' '}
+                    <span className="text-[#8FE7C7]">Sleeping Canopy</span>, parting the tidal mists of the{' '}
+                    <span className="text-[#8FE7C7]">Moonlit Marsh</span>, rekindling the deep pulse of{' '}
+                    <span className="text-[#8FE7C7]">The Hollow Below</span>, and ascending the skyward updrafts of{' '}
+                    <span className="text-[#8FE7C7]">The Windward Ruins</span> to awaken the Great Crown Bloom and reunite the Veilgrove in warmth.
+                  </p>
+                </div>
+
+                {/* 3. GITHUB REPOSITORY LINK */}
+                <div className="pt-2 border-t border-[#294D4D]">
+                  <a
+                    href="https://github.com/rawsushies/wispwake"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#121B2B] hover:bg-[#294D4D] border border-[#8FE7C7]/50 text-[#8FE7C7] font-semibold text-xs transition-colors"
+                  >
+                    <span>Explore the open-source project on GitHub</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>

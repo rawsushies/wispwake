@@ -9,8 +9,8 @@ export type BloomState = 'dormant' | 'awakening' | 'active' | 'closing';
 /**
  * BloomPlatform (Section 7.3 of the Visual Bible):
  * - Dormant state: Closed flower bud with Wake Mint veins (no platform collision).
- * - Activated result: Opens into a stable platform (114x18 solid top surface).
- * - Persistence: Temporary (default ~5.2s, configurable in physicsTuning), refreshable if pulsed again while open.
+ * - Activated result: Opens into a stable platform (112x18 solid top surface).
+ * - Persistence: Temporary (configurable by Story/Trial difficulty or physicsTuning), refreshable if pulsed again while open.
  * - Includes a clear closing warning state during the final 1.35s so the player is never surprised.
  */
 export class BloomPlatform implements WakeInteractable {
@@ -18,13 +18,21 @@ export class BloomPlatform implements WakeInteractable {
   public readonly sprite: Phaser.Physics.Arcade.Sprite;
   public readonly body: Phaser.Physics.Arcade.Body;
   private readonly scene: Phaser.Scene;
+  private readonly customActiveDuration?: number;
 
   public state: BloomState = 'dormant';
   public activeTimer = 0;
 
-  constructor(scene: Phaser.Scene, id: string, x: number, y: number) {
+  constructor(
+    scene: Phaser.Scene,
+    id: string,
+    x: number,
+    y: number,
+    customActiveDuration?: number
+  ) {
     this.scene = scene;
     this.id = id;
+    this.customActiveDuration = customActiveDuration;
     this.registerAnimations(scene);
 
     this.sprite = scene.physics.add.sprite(x, y, 'bloom_platform_sheet', 0);
@@ -42,6 +50,10 @@ export class BloomPlatform implements WakeInteractable {
     this.body.checkCollision.right = false;
 
     this.setDormant();
+  }
+
+  public getConfiguredDuration(): number {
+    return this.customActiveDuration ?? activePhysicsTuning.bloomDuration;
   }
 
   private registerAnimations(scene: Phaser.Scene): void {
@@ -98,7 +110,7 @@ export class BloomPlatform implements WakeInteractable {
 
   public onWakeActivated(): boolean {
     AudioManager.playBloomOpen();
-    this.activeTimer = activePhysicsTuning.bloomDuration;
+    this.activeTimer = this.getConfiguredDuration();
     this.body.enable = true;
     this.sprite.setTint(0xffffff);
 

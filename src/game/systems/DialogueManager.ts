@@ -4,11 +4,11 @@ import { CAMPAIGN_DIALOGUE_ENTRIES, DialogueEntry } from '../dialogue/dialogueDa
 import { SaveManager } from './SaveManager';
 
 /**
- * DialogueManager & CompanionHelperSystem (Section 03):
- * - Evaluates zone-based story narration and event-based contextual helper hints for Pip.
+ * DialogueManager & CompanionHelperSystem (Milestone 5 — Sections 07 & 17):
+ * - Evaluates zone-based story narration, Memory Echo lore revelations, and contextual helper hints for Pip.
  * - Tracks once-per-save dialogue IDs in `SaveManager` so Pip never repeats the same story lines on re-entry.
- * - Detects when a player lingers near a dormant flower/root bridge for >7 seconds without pulsing Wake,
- *   allowing Pip to offer a gentle, non-intrusive reminder with a 25s cooldown.
+ * - Detects when a player lingers near a dormant flower/root bridge for >7.5 seconds without pulsing Wake,
+ *   allowing Pip to offer a gentle, non-intrusive reminder with a 24s cooldown.
  * - Projects Pip's world position to 960x540 logical screen coordinates so the React HUD can render an
  *   elegant world-matched speech bubble directly above Pip without obscuring Nima.
  */
@@ -20,7 +20,6 @@ export class DialogueManager {
   private remainingTime = 0;
   private sessionTriggeredIds = new Set<string>();
 
-  // Struggle / helper hint timer when standing near a dormant interactable without pulsing
   private lingerNearDormantTimer = 0;
   private helperCooldownTimer = 0;
 
@@ -39,6 +38,19 @@ export class DialogueManager {
   public dismissCurrent(): void {
     this.currentEntry = null;
     this.remainingTime = 0;
+  }
+
+  public triggerById(dialogueId: string): void {
+    if (!SaveManager.get().settings.subtitlesEnabled) return;
+    const match = CAMPAIGN_DIALOGUE_ENTRIES.find((d) => d.id === dialogueId);
+    if (match) {
+      this.currentEntry = match;
+      this.remainingTime = match.durationSec;
+      this.sessionTriggeredIds.add(match.id);
+      if (match.oncePerSave) {
+        SaveManager.markDialogueSeen(match.id);
+      }
+    }
   }
 
   public triggerEvent(
@@ -84,7 +96,6 @@ export class DialogueManager {
       return;
     }
 
-    // Do not override a higher-priority active line
     if (this.currentEntry && this.currentEntry.priority > entry.priority && this.remainingTime > 0.5) {
       return;
     }

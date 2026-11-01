@@ -9,13 +9,11 @@ export interface UnifiedInputState {
 }
 
 /**
- * InputManager — Milestone 4 Unified Input Architecture (Section 10).
+ * InputManager — Milestone 5 Unified Input Architecture.
  *
- * Combines Desktop Keyboard, Mobile/Tablet Multi-Touch Controls, and optional HTML5 Gamepad
- * into a single deterministic frame state:
- * - Supports simultaneous multi-touch (e.g., holding Right while tapping Jump and Wake).
- * - Handles pointerup, pointercancel, window blur, and visibilitychange so virtual buttons
- *   can never get stuck.
+ * Combines Desktop Keyboard (both Phaser KeyboardPlugin AND direct window keydown/keyup
+ * listeners so closing a React modal never drops keyboard focus), Mobile/Tablet Multi-Touch
+ * Controls, and HTML5 Gamepad into a single deterministic frame state.
  */
 class UnifiedInputService {
   private touchLeft = false;
@@ -23,8 +21,34 @@ class UnifiedInputService {
   private touchJump = false;
   private touchWake = false;
 
+  private winKeys = new Set<string>();
+  private listenersAttached = false;
+
   private prevCombinedJump = false;
   private prevCombinedWake = false;
+
+  constructor() {
+    this.ensureWindowListeners();
+  }
+
+  private ensureWindowListeners(): void {
+    if (this.listenersAttached || typeof window === 'undefined') return;
+    this.listenersAttached = true;
+
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      this.winKeys.add(e.code);
+    });
+
+    window.addEventListener('keyup', (e: KeyboardEvent) => {
+      this.winKeys.delete(e.code);
+    });
+
+    window.addEventListener('blur', () => {
+      this.clearAll();
+    });
+  }
 
   public setTouchButton(button: 'left' | 'right' | 'jump' | 'wake', active: boolean): void {
     switch (button) {
@@ -48,6 +72,7 @@ class UnifiedInputService {
     this.touchRight = false;
     this.touchJump = false;
     this.touchWake = false;
+    this.winKeys.clear();
     this.prevCombinedJump = false;
     this.prevCombinedWake = false;
   }
@@ -72,11 +97,36 @@ class UnifiedInputService {
       keyX?: Phaser.Input.Keyboard.Key;
     }
   ): UnifiedInputState {
-    // 1. Keyboard State
-    const kbLeft = Boolean(cursors?.left?.isDown || keys?.keyA?.isDown);
-    const kbRight = Boolean(cursors?.right?.isDown || keys?.keyD?.isDown);
-    const kbJump = Boolean(cursors?.up?.isDown || keys?.keySpace?.isDown || keys?.keyZ?.isDown);
-    const kbWake = Boolean(keys?.keyE?.isDown || keys?.keyX?.isDown);
+    this.ensureWindowListeners();
+
+    // 1. Keyboard State (Phaser + direct window key state)
+    const kbLeft = Boolean(
+      cursors?.left?.isDown ||
+        keys?.keyA?.isDown ||
+        this.winKeys.has('KeyA') ||
+        this.winKeys.has('ArrowLeft')
+    );
+    const kbRight = Boolean(
+      cursors?.right?.isDown ||
+        keys?.keyD?.isDown ||
+        this.winKeys.has('KeyD') ||
+        this.winKeys.has('ArrowRight')
+    );
+    const kbJump = Boolean(
+      cursors?.up?.isDown ||
+        keys?.keySpace?.isDown ||
+        keys?.keyZ?.isDown ||
+        this.winKeys.has('Space') ||
+        this.winKeys.has('KeyZ') ||
+        this.winKeys.has('KeyW') ||
+        this.winKeys.has('ArrowUp')
+    );
+    const kbWake = Boolean(
+      keys?.keyE?.isDown ||
+        keys?.keyX?.isDown ||
+        this.winKeys.has('KeyE') ||
+        this.winKeys.has('KeyX')
+    );
 
     // 2. Optional Gamepad State
     let gpLeft = false;
