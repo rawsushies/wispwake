@@ -1,0 +1,1121 @@
+
+PROJECT: WIS PWAKE
+MILESTONE 3 — VISUAL EVOLUTION & CHARACTER ART REDESIGN
+
+PROJECT REPOSITORY:
+https://github.com/rawsushies/wispwake
+
+CANONICAL DESIGN DOCUMENT:
+Wispwake — Game Design & Visual Bible
+
+EXISTING CHARACTER REFERENCE:
+src/assets/images/ref_nima_pip_concept_1793515706089.jpg
+
+============================================================
+PROJECT DIRECTIVE
+============================================================
+
+You are continuing development of an existing, playable game.
+
+Your responsibility is to transform Wispwake from a functional
+2D platformer with a largely static painted background into
+a visually rich, atmospheric, living fantasy world.
+
+This milestone has THREE equally important objectives:
+
+1. Redesign Nima and Pip to closely match the quality and
+   appearance of their original character concept artwork.
+
+2. Transform the current environment into a richly layered,
+   animated, living forest.
+
+3. Replace the visibly primitive and repetitive platform
+   presentation with sophisticated organic environmental art.
+
+There is also one important product decision:
+
+REMOVE THE AI ART GENERATION INTERFACE FROM THE ACTUAL GAME.
+
+Google AI Studio is our development environment and artwork
+production workspace.
+
+Wispwake is the finished player-facing game.
+
+Players must never see AI generation controls, model names,
+API configuration, or developer asset-generation interfaces.
+
+Do not create a new project.
+
+Do not replace the existing gameplay architecture.
+
+Do not casually rewrite successful systems.
+
+Do not sacrifice gameplay quality to achieve visual complexity.
+
+============================================================
+01. SOURCE OF TRUTH AND EXISTING PROJECT
+============================================================
+
+Read the complete Visual Bible.
+
+Inspect the current GitHub repository and understand the
+existing implementation before making changes.
+
+Preserve the existing architecture:
+
+- React 19
+- TypeScript
+- Vite
+- Phaser 3
+- Phaser Arcade Physics
+
+Important existing files include:
+
+src/App.tsx
+src/game/scenes/GameplayScene.ts
+src/game/systems/AtlasBuilder.ts
+src/game/entities/player/Player.ts
+src/game/entities/companion/Pip.ts
+src/game/systems/WakeSystem.ts
+src/game/systems/CameraController.ts
+src/game/levels/sleepingCanopy/levelData.ts
+src/game/config/physicsTuning.ts
+src/game/config/palette.ts
+src/game/systems/SaveManager.ts
+src/components/ArtForgerModal.tsx
+ASSET_MANIFEST.md
+
+Inspect their actual current contents.
+
+Preserve all existing working gameplay functionality.
+
+Do not delete the existing character concept artwork.
+
+Do not discard previously generated environment assets.
+
+Do not overwrite user-created files without understanding
+their purpose.
+
+Before implementation, establish a baseline and preserve
+a recoverable Git commit or branch if the connected environment
+supports it.
+
+============================================================
+02. CHARACTER REDESIGN — CRITICAL PRIORITY
+============================================================
+
+THIS SECTION OVERRIDES THE PREVIOUS CHARACTER PRESERVATION
+INSTRUCTION.
+
+The existing Nima and Pip sprite artwork is acceptable as an
+initial prototype, but it is not the final visual standard.
+
+We want to upgrade both characters significantly.
+
+CANONICAL REFERENCE:
+
+Use this existing image as the PRIMARY CHARACTER ART REFERENCE:
+
+src/assets/images/ref_nima_pip_concept_1793515706089.jpg
+
+Inspect it carefully before generating or drawing any new
+character artwork.
+
+The existing concept image establishes the intended visual
+identity of Nima and Pip.
+
+The actual in-game characters should look as close as
+technically possible to the illustrated designs.
+
+Do not treat the reference as a loose mood board.
+
+Do not invent a different character design.
+
+Do not simplify the artwork into generic cartoon graphics.
+
+Do not preserve the current simplified character appearance
+merely for compatibility with the old sprite implementation.
+
+CHARACTER A — NIMA
+
+Redesign the protagonist using the actual character reference.
+
+Preserve the recognizable identity and visual details
+established in the artwork, including:
+
+- Character silhouette.
+- Body proportions.
+- Head and facial proportions.
+- Clothing and cloak design.
+- Organic material appearance.
+- Color relationships.
+- Glowing seed.
+- Small expressive details.
+- Overall hand-painted fantasy character aesthetic.
+
+The result must retain the visual personality of the
+reference artwork.
+
+GAMEPLAY ORIENTATION:
+
+Nima is a side-scrolling platformer character.
+
+Create a proper gameplay-facing side profile.
+
+Ensure the character remains recognizable when facing
+either direction.
+
+The side-view design must be faithful to the concept artwork,
+not an unrelated redesign.
+
+ART QUALITY:
+
+- Hand-painted appearance.
+- Rich material details.
+- Beautifully controlled shading.
+- Organic brush textures.
+- Soft ambient shadows.
+- Detailed fabric and clothing.
+- Natural color variation.
+- Beautifully integrated magical illumination.
+- Consistent proportions between animation frames.
+
+Avoid:
+- Flat vector-like character construction.
+- Generic cartoon appearance.
+- Primitive circles and rectangles.
+- Excessively thick outlines.
+- Random costume changes between frames.
+- Overly simplified facial features.
+- Inconsistent AI-generated character proportions.
+
+CHARACTER B — PIP
+
+Redesign Pip alongside Nima.
+
+Pip must match the same artistic quality as Nima.
+
+Use the original concept reference as the design authority.
+
+Maintain Pip's recognizable identity, proportions, wing
+appearance, colors, lighting and magical personality.
+
+Pip must not look like a generic glowing circle or
+a simple geometric fairy.
+
+Its appearance should communicate a small living magical
+creature with a distinctive silhouette.
+
+Give its wings beautiful translucent material shading,
+subtle internal color variation and organic movement.
+
+Make Pip visually expressive and emotionally engaging.
+
+CHARACTER RELATIONSHIP:
+
+Nima and Pip must look like they belong to the same
+illustrated world.
+
+Their materials, lighting, proportions and brushwork
+must be stylistically consistent.
+
+Pip should remain close enough to Nima to feel like a
+companion without obstructing the player's view.
+
+============================================================
+03. CHARACTER ASSET PRODUCTION PIPELINE
+============================================================
+
+Use the native image-generation capabilities available
+inside the Google AI Studio DEVELOPMENT WORKSPACE.
+
+Generate original game-ready character artwork using
+the existing reference image.
+
+The game itself must not generate these assets.
+
+First generate and approve:
+
+A. Nima character reference.
+B. Pip character reference.
+C. Nima side-view gameplay design.
+D. Pip gameplay design.
+E. Nima animation asset set.
+F. Pip animation asset set.
+
+CHARACTER ANIMATIONS — NIMA
+
+Implement:
+
+- Idle.
+- Running.
+- Jump anticipation.
+- Rising.
+- Falling.
+- Landing.
+- Wake casting.
+- Respawning.
+
+CHARACTER ANIMATIONS — PIP
+
+Implement:
+
+- Hovering.
+- Following.
+- Wing flapping.
+- Curious reaction.
+- Wake reaction.
+- Resting.
+- Turning and directional movement.
+
+ANIMATION QUALITY:
+
+Animation must preserve the approved character appearance.
+
+Maintain consistent:
+- Body proportions.
+- Head size.
+- Clothing.
+- Facial appearance.
+- Colors.
+- Materials.
+- Seed placement.
+- Wing shape.
+- Character scale.
+
+Do not generate unrelated individual images for each frame.
+
+Use the same canonical reference artwork as the source
+for all character animation production.
+
+Prefer clean, transparent PNG sprite sheets or individually
+exported transparent animation frames.
+
+Validate the actual transparency.
+
+Do not claim that a JPEG has a transparent background.
+
+Where available, use a consistent image-reference editing
+workflow to maintain character identity.
+
+If complete AI-generated sprite sheets have poor frame
+consistency, use an alternative:
+
+Create a 2D cutout animation rig using separately extracted
+parts of the approved painted artwork.
+
+Animate the actual painted components through carefully
+controlled transformations.
+
+Do not replace the artwork with newly drawn primitive
+geometric characters.
+
+The final result must visually resemble the original
+illustration.
+
+IMPORTANT:
+
+The existing procedural character construction in
+AtlasBuilder.ts must be evaluated and replaced or refactored
+where it conflicts with the upgraded painted designs.
+
+Do not retain the previous simplified Nima/Pip appearance
+as the primary in-game character art.
+
+Retain the existing gameplay controllers and physics
+where possible.
+
+Redesigning character artwork does not mean rewriting
+the Player physics implementation.
+
+============================================================
+04. CHARACTER INTEGRATION AND GAMEPLAY READABILITY
+============================================================
+
+Integrate the new artwork into:
+
+Player.ts
+Pip.ts
+AtlasBuilder.ts
+GameplayScene.ts
+
+Maintain the current Phaser entity architecture.
+
+Calibrate the actual collision hitbox independently from
+the visible sprite.
+
+The new artwork may have different dimensions, proportions
+and transparent padding.
+
+Do not blindly reuse old sprite offsets.
+
+Verify:
+
+- Feet align with the collision body.
+- Nima does not float above platforms.
+- Nima does not sink into terrain.
+- Cloak decorations do not interfere with collision.
+- The glowing seed remains visible.
+- Character scaling is appropriate.
+- Pip follows smoothly.
+- Pip does not overlap critical gameplay objects.
+
+Maintain the close-follow camera philosophy.
+
+Nima must remain large and readable enough to appreciate
+the upgraded artwork during actual gameplay.
+
+Do not zoom out excessively to show more scenery.
+
+============================================================
+05. PRODUCT CLEANUP — REMOVE IN-GAME AI ART STUDIO
+============================================================
+
+The existing Veilgrove Art Forger is a development feature.
+
+It is NOT part of the final game.
+
+Remove the following from the player-facing interface:
+
+- Art Studio buttons.
+- Art Forger modal.
+- High-resolution image-generation controls.
+- Image-editing controls.
+- AI model names.
+- Image-generation menus.
+- Development-only asset controls.
+
+Remove it from:
+- Title screen.
+- Active gameplay.
+- Pause menu.
+- Other player-facing screens.
+
+Remove its associated API endpoints and runtime integration
+if they are exclusively used by this feature.
+
+Inspect server.ts and package.json before removing anything.
+
+Do not remove the development server functionality.
+
+Do not remove unrelated dependencies.
+
+Do not remove existing generated artwork.
+
+Do not break the application's ability to run inside
+Google AI Studio.
+
+The artwork production workflow must be:
+
+GOOGLE AI STUDIO DEVELOPMENT ENVIRONMENT
+        ↓
+Generate or edit original artwork
+        ↓
+Approve visual quality
+        ↓
+Export approved asset files
+        ↓
+Commit assets into Wispwake repository
+        ↓
+Integrate artwork into Phaser
+        ↓
+Players experience the finished game
+
+No player-facing AI asset generation.
+
+============================================================
+06. ENVIRONMENT TRANSFORMATION — LIVING VEILGROVE
+============================================================
+
+PRIMARY VISUAL OBJECTIVE:
+
+The existing forest background is beautiful but reads
+as a largely static image.
+
+The environment must become a collection of distinct
+visual layers with independent movement and animation.
+
+Build the environment using at least SIX distinguishable
+visual systems.
+
+LAYER 1 — FAR SKY
+
+Include:
+- Twilight atmosphere.
+- Distant canopy.
+- Distant mountain silhouettes.
+- Large-scale environmental lighting.
+- Slow atmospheric movement.
+
+LAYER 2 — DISTANT ENVIRONMENT
+
+Include:
+- Distant trees.
+- Multiple rows of forest silhouettes.
+- Distant flying creatures.
+- Small flocks of birds.
+- Distant environmental movement.
+
+LAYER 3 — MIDGROUND FOREST
+
+Include:
+- Giant tree trunks.
+- Large branches.
+- Hanging moss.
+- Dense canopy structures.
+- Distinct tree silhouettes.
+- Subtle wind-driven movement.
+
+LAYER 4 — NEAR ENVIRONMENT
+
+Include:
+- Massive roots.
+- Twisting branches.
+- Hanging vegetation.
+- Large leaves.
+- Dense forest structures.
+- Natural visual overlaps.
+
+LAYER 5 — FOREGROUND
+
+Include:
+- Ferns.
+- Large leaves.
+- Hanging branches.
+- Grass silhouettes.
+- Foreground botanical details.
+- Environmental framing near the camera.
+
+LAYER 6 — ATMOSPHERE
+
+Include:
+- Drifting fog.
+- Floating pollen.
+- Glowing spores.
+- Fireflies.
+- Soft light rays.
+- Occasional tiny flying creatures.
+
+IMPORTANT:
+
+Do not merely duplicate the current two background images
+at different parallax speeds.
+
+Create distinct visual content for each layer.
+
+Do not flatten the entire environment into a single image.
+
+Create independently usable visual assets.
+
+Avoid obvious repeating tiles and duplicated tree formations.
+
+The environment should look naturally composed rather than
+like a repeated image strip.
+
+Use wider or separately composed background sections
+where necessary.
+
+============================================================
+07. ENVIRONMENT ASSET GENERATION
+============================================================
+
+Generate original Wispwake environmental artwork through
+the available Google AI Studio development capabilities.
+
+Create separate production-ready assets for:
+
+- Far canopy backgrounds.
+- Distant forest silhouettes.
+- Midground giant trees.
+- Large roots.
+- Near vegetation.
+- Foreground foliage.
+- Birds and flying silhouettes.
+- Independent botanical elements.
+- Ambient creatures.
+- Organic platform decorations.
+
+Use a consistent hand-painted art direction.
+
+Maintain the canonical Veilgrove palette:
+
+#121B2B
+#1D2D43
+#294D4D
+#57725B
+#78906A
+#A7B8AE
+#8FE7C7
+#F1C878
+#B7A2E8
+#E98372
+
+ART REQUIREMENTS:
+
+- Rich painterly textures.
+- Organic shapes.
+- Natural detail variation.
+- Consistent lighting direction.
+- Atmospheric perspective.
+- Beautiful material shading.
+- No text.
+- No UI.
+- No watermarks.
+
+Separate artwork according to its intended use.
+
+Use transparent PNG or WebP assets for isolated objects
+when appropriate.
+
+Verify transparency and dimensions.
+
+Do not pretend flattened images are independently
+animated environment layers.
+
+If native image generation is unavailable for an asset,
+provide a complete production prompt and mark the asset
+as pending rather than inventing a completed asset.
+
+============================================================
+08. ENVIRONMENTAL ANIMATION AND AMBIENT LIFE
+============================================================
+
+The world must feel alive even when Nima is standing still.
+
+Implement independent environmental animation systems.
+
+BIRDS:
+
+- Small groups of birds flying in the distance.
+- Natural flight trajectories.
+- Different speeds and altitudes.
+- Occasional flock departures.
+- Small silhouettes appropriate to their distance.
+- Subtle wing animation.
+
+OTHER FLYING CREATURES:
+
+- Occasional tiny organisms traveling between trees.
+- Different movement patterns.
+- Natural hovering behavior.
+- Appropriate scale and lighting.
+
+VEGETATION:
+
+- Leaves swaying gently.
+- Ferns responding to wind.
+- Hanging vines moving independently.
+- Grass reacting to nearby movement.
+- Small plants moving when Nima passes.
+
+ATMOSPHERE:
+
+- Fog drifting independently.
+- Pollen moving at different depths.
+- Fireflies floating through vegetation.
+- Glowing spores moving naturally.
+- Occasional illuminated environmental details.
+
+ENVIRONMENTAL VARIATION:
+
+Not every object should move at the same speed.
+
+Some environments should be calm.
+
+Others should feel more active.
+
+Use a restrained animation approach.
+
+Do not turn the entire scene into constant particle noise.
+
+Respect reduced-motion and reduced-particle settings.
+
+Keep performance stable through bounded object counts,
+reusable textures and efficient updates.
+
+============================================================
+09. ORGANIC TERRAIN AND PLATFORM REDESIGN
+============================================================
+
+The existing gameplay terrain uses reliable but visually
+simple rectangular collision platforms.
+
+Preserve their functionality.
+
+However, their visible appearance must be upgraded.
+
+The current visual language feels too repetitive and
+geometrically uniform.
+
+We want the platforms to look like natural formations
+that belong to the Veilgrove.
+
+Create an organic terrain art kit.
+
+A. ANCIENT ROOT PLATFORMS
+
+- Uneven moss-covered edges.
+- Layered bark.
+- Twisting root strands.
+- Hanging roots beneath platforms.
+- Small vegetation clusters.
+- Organic top surfaces.
+- Natural variations in thickness.
+
+B. STONE FORMATIONS
+
+- Irregular silhouettes.
+- Multiple rock layers.
+- Moss-covered surfaces.
+- Small plants growing through cracks.
+- Natural color variation.
+- Visible material depth.
+
+C. LIVING PLATFORMS
+
+- Giant flowers.
+- Large organic petals.
+- Glowing veins.
+- Rooted growth structures.
+- Animated plant surfaces.
+- Integrated environmental illumination.
+
+D. HAZARDS
+
+- Natural irregular thorn formations.
+- Thorn clusters growing out of roots and soil.
+- Organic hazard silhouettes.
+- Clear warning colors.
+- Appropriate animation and visual telegraphs.
+
+IMPORTANT VISUAL ASSEMBLY RULE:
+
+Do not present the visible terrain as a plain rectangle
+with a decorative line at its top.
+
+Create a combination of different visual elements:
+
+1. Organic top silhouette.
+2. Moss or grass surface.
+3. Main bark or rock body.
+4. Side texture.
+5. Hanging roots.
+6. Small plants.
+7. Vegetation overlays.
+8. Environmental details.
+
+Use deliberate overlap between assets.
+
+Allow decorative roots and vegetation to extend beyond
+the basic collision shape.
+
+Vary the platform top silhouettes.
+
+Create different visual formations for different sections.
+
+Make the terrain appear grown into the world rather than
+placed into it.
+
+NEVER compromise collision readability.
+
+The visible artwork and physics bodies must remain separate.
+
+Players must immediately understand which surfaces
+are walkable and where hazards begin.
+
+============================================================
+10. ENVIRONMENTAL WAKE REACTIONS
+============================================================
+
+Preserve the existing functional Wake system.
+
+Expand its environmental response.
+
+When Nima activates Wake:
+
+- Nearby plants react to the pulse.
+- Leaves briefly move.
+- Dormant vegetation brightens.
+- Nearby floating spores illuminate.
+- Tiny creatures respond.
+- Appropriate particles spread outward.
+- Environmental light responds subtly.
+- Nearby flowers animate.
+- Suitable sound effects accompany the action.
+
+Separate environmental objects into three categories:
+
+1. Gameplay interactables.
+2. Ambient reactive objects.
+3. Decorative environmental objects.
+
+Do not make every object a gameplay interaction.
+
+Make Wake feel like an energy that affects the surrounding
+ecosystem rather than an isolated visual circle.
+
+FIRST BLOOM RESTORATION:
+
+Improve the existing final restoration moment.
+
+Do not rely only on a screen-wide golden tint.
+
+Create a coordinated restoration sequence involving:
+
+- Ancient Bloom animation.
+- Nearby plants opening.
+- New glowing details becoming visible.
+- Environmental light transformation.
+- Atmospheric changes.
+- Ambient creatures reacting.
+- Pip reacting emotionally.
+- Appropriate musical progression.
+
+Preserve the actual completion logic.
+
+============================================================
+11. CAMERA, LIGHTING AND COMPOSITION
+============================================================
+
+Preserve the existing close-follow camera philosophy.
+
+Do not zoom out to compensate for environment design.
+
+Do not allow foreground elements to obscure Nima.
+
+Use cinematic composition:
+
+- Strong depth separation.
+- Clear playable layer.
+- Controlled foreground overlap.
+- Atmospheric perspective.
+- Directional lighting.
+- Localized glow.
+- Subtle environmental shadows.
+- Controlled contrast.
+- Rich material separation.
+
+Lighting must guide visual attention.
+
+Nima and Pip must remain visually prominent.
+
+Walkable platforms must remain readable.
+
+Hazards must remain visually distinguishable.
+
+Avoid excessive full-screen bloom and blur.
+
+============================================================
+12. TECHNICAL IMPLEMENTATION
+============================================================
+
+Maintain Phaser 3 and the existing React architecture.
+
+Do not put all new code inside GameplayScene.ts.
+
+Introduce or maintain dedicated systems where appropriate:
+
+- CharacterArtManager.
+- EnvironmentLayerManager.
+- AmbientLifeSystem.
+- VegetationAnimationSystem.
+- TerrainVisualAssembler.
+- EnvironmentalReactionSystem.
+
+These should integrate into the current architecture
+rather than duplicate existing systems.
+
+Preserve existing game configuration and physics tuning.
+
+Maintain collision separation.
+
+Reuse textures.
+
+Use deterministic placement for environmental objects.
+
+Avoid excessive object allocation.
+
+Keep the game maintainable.
+
+Suggested asset organization:
+
+src/assets/images/
+  characters/
+    nima/
+    pip/
+
+  world/
+    sleeping_canopy/
+      far_sky/
+      distant/
+      midground/
+      near_environment/
+      foreground/
+      ambient_creatures/
+
+  terrain/
+    root_platforms/
+    stone_platforms/
+    vegetation/
+    hazards/
+
+  objects/
+    blooms/
+    roots/
+    checkpoints/
+
+  effects/
+    wake/
+    particles/
+    lighting/
+
+Update ASSET_MANIFEST.md for every new asset.
+
+Include:
+- Filename.
+- Category.
+- Dimensions.
+- Format.
+- Animation information.
+- Source or generation method.
+- Intended use.
+- Implementation status.
+- Licence information if externally sourced.
+
+Keep assets local to the repository.
+
+============================================================
+13. DEVELOPER INTERFACE AND RELEASE CLEANUP
+============================================================
+
+Debug mode is allowed during development.
+
+Preserve useful development functionality:
+
+- Hitbox visualization.
+- Physics tuning.
+- Performance telemetry.
+- Wake radius visualization.
+- Collision diagnostics.
+
+However, developer tools must not appear in the final
+player-facing game.
+
+Hide developer-only tools behind import.meta.env.DEV
+or an equivalent development-only condition.
+
+The final player interface must not contain:
+
+- Debug mode.
+- Physics tuning controls.
+- Test room selectors.
+- AI asset-generation buttons.
+- AI model information.
+- Developer telemetry.
+
+Keep actual player settings and gameplay controls.
+
+============================================================
+14. IMPLEMENTATION ORDER
+============================================================
+
+Implement this milestone in the following order.
+
+STAGE A — BASELINE
+
+- Inspect existing code.
+- Identify current character and environment assets.
+- Record the existing gameplay behavior.
+- Establish a recoverable baseline.
+
+STAGE B — CHARACTER ART REDESIGN
+
+- Study the existing Nima/Pip concept reference.
+- Produce upgraded character artwork.
+- Create consistent game-ready assets.
+- Integrate upgraded animations.
+- Calibrate sprite sizes and hitboxes.
+- Verify character appearance in actual gameplay.
+
+STAGE C — ENVIRONMENT ASSET PRODUCTION
+
+- Generate new environmental layers.
+- Generate foreground elements.
+- Generate distant creatures.
+- Generate environmental details.
+- Organize and export approved assets.
+
+STAGE D — LIVING ENVIRONMENT
+
+- Implement distinct parallax layers.
+- Add birds and flying creatures.
+- Animate foliage and vines.
+- Add drifting fog and ambient effects.
+- Improve environmental composition.
+
+STAGE E — ORGANIC TERRAIN
+
+- Redesign platform artwork.
+- Add roots, moss, vegetation and organic silhouettes.
+- Improve hazard visuals.
+- Preserve the existing collision system.
+
+STAGE F — WAKE AND RESTORATION POLISH
+
+- Expand environmental Wake reactions.
+- Improve the restoration sequence.
+- Add appropriate animation and audio feedback.
+
+STAGE G — PRODUCT CLEANUP AND QA
+
+- Remove in-game Art Forger.
+- Remove player-facing developer tools.
+- Run production build and TypeScript checks.
+- Test the complete playable level.
+- Capture screenshots.
+
+Do not stop after producing a written plan.
+
+Execute the milestone in the existing connected repository.
+
+If an image-generation operation is unavailable,
+continue with all other feasible implementation work
+and report the outstanding artwork separately.
+
+============================================================
+15. ACCEPTANCE CRITERIA
+============================================================
+
+The milestone is only complete when the actual running
+game demonstrates the improvements.
+
+CHARACTER QUALITY:
+
+- Nima closely resembles the original concept artwork.
+- Pip closely resembles the original concept artwork.
+- Both characters have consistent hand-painted styling.
+- Character animation preserves their visual identities.
+- No primitive procedural replacement remains as
+  the primary character artwork.
+- Character collision remains accurate.
+- Nima remains visually readable during gameplay.
+
+ENVIRONMENT:
+
+- Six distinguishable environment systems.
+- Clearly separated depth layers.
+- Actual independently moving visual layers.
+- Flying birds or other ambient creatures.
+- Animated foliage.
+- Hanging vegetation.
+- Moving atmospheric fog.
+- Ambient particles.
+- No obvious repetitive background tiling.
+
+TERRAIN:
+
+- Organic platform silhouettes.
+- Rich layered terrain artwork.
+- Visible roots and moss.
+- Natural variations between formations.
+- Improved thorn and hazard artwork.
+- Reliable collision geometry.
+- Clear walkable surface identification.
+
+GAMEPLAY:
+
+- Existing movement remains functional.
+- Existing jumps remain functional.
+- Existing Wake interactions remain functional.
+- Bloom platforms work.
+- Root bridges work.
+- Checkpoints work.
+- Drifter traversal works.
+- The seven-beat level remains completable.
+- Restoration still triggers correctly.
+
+PRODUCT:
+
+- No player-facing Art Studio.
+- No image-generation interface.
+- No player-facing developer telemetry.
+- Existing player settings remain functional.
+
+TECHNICAL:
+
+- Production build succeeds.
+- TypeScript checks succeed.
+- No missing asset references.
+- No browser console errors.
+- No obvious visual regressions.
+- Stable performance on reasonable desktop hardware,
+  including systems comparable to GTX 1050 Ti / 16 GB RAM.
+
+============================================================
+16. REQUIRED FINAL REPORT
+============================================================
+
+After implementation, report:
+
+1. What was changed.
+2. Which existing systems were preserved.
+3. Which assets were generated.
+4. Which assets were imported.
+5. Which assets remain pending.
+6. How Nima's new design compares with the original reference.
+7. How Pip's new design compares with the original reference.
+8. How the environment layers now work.
+9. How organic terrain was implemented.
+10. What was removed from the player-facing game.
+11. Build and TypeScript results.
+12. Browser testing results.
+13. Remaining known defects.
+
+Capture actual screenshots of:
+
+- Nima and Pip together.
+- Nima running.
+- Nima jumping.
+- Nima casting Wake.
+- The layered forest.
+- Birds and ambient creatures.
+- Organic platforms and hazards.
+- The final restored environment.
+- The cleaned title screen.
+
+Screenshots must come from the actual running implementation.
+
+Do not present generated concept art as proof of
+successful game integration.
+
+Do not claim untested features are complete.
+
+============================================================
+FINAL CREATIVE DIRECTIVE
+============================================================
+
+Wispwake must feel like a hand-painted fantasy adventure
+that players can actually inhabit.
+
+Nima and Pip should look like illustrated characters
+brought to life, not primitive game sprites.
+
+The Veilgrove should feel alive independently of the player.
+
+Platforms should look like natural formations that belong
+to the environment.
+
+Wake should influence the surrounding ecosystem.
+
+The game's artwork, animations, lighting, atmosphere,
+gameplay and storytelling must belong to the same world.
+
+Do not add complexity for its own sake.
+
+Do not sacrifice working gameplay.
+
+Do not replace the existing project.
+
+We are elevating Wispwake, not rebuilding it from zero.
+
+QUALITY OF EXECUTION TAKES PRIORITY OVER FEATURE COUNT.
