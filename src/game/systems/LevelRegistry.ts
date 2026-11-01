@@ -1,5 +1,6 @@
 import { CampaignChapterId, StoryDifficulty } from '../config/gameConfig';
 import {
+  BiomeTheme,
   LevelDefinition,
   SLEEPING_CANOPY_LEVEL,
 } from '../levels/sleepingCanopy/levelData';
@@ -9,7 +10,7 @@ export interface CampaignLevelDefinition extends LevelDefinition {
   chapterNumber: number;
   regionSubtitle: string;
   description: string;
-  biomeTheme: 'canopy' | 'marsh' | 'cavern' | 'ruins';
+  biomeTheme: BiomeTheme;
 }
 
 /**
@@ -21,13 +22,12 @@ export const CHAPTER_01_SLEEPING_CANOPY: CampaignLevelDefinition = {
   chapterNumber: 1,
   regionSubtitle: 'Ancient roots, twilight forest, and the first glowing blooms',
   description:
-    'Awaken on a vast tree root alongside Pip and use the living seed’s Wake pulse to stir dormant flowers, uncoil ancient bridges, and rekindle the First Bloom Sanctuary.',
+    'Awaken on a vast tree root alongside Pip, meet Oakhaven the Last Gardener, and use the living seed’s Wake pulse to stir dormant flowers, uncoil bridges, and rekindle the First Bloom Sanctuary.',
   biomeTheme: 'canopy',
 };
 
 /**
- * Chapter 02 — The Moonlit Marsh (Milestone 5 Expanded 10-Sub-Area Adventure — Section 10)
- * Introduces Water Currents, drifting lily organisms, sunken stone arches, and the Marsh Lotus.
+ * Chapter 02 — The Moonlit Marsh (10 Sub-Areas, 11,800 units)
  */
 export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
   id: 'moonlit_marsh',
@@ -36,7 +36,7 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
   title: 'Chapter 02 · The Moonlit Marsh',
   regionSubtitle: 'Luminous wetlands, flowing tidal channels, and sunken stone arches',
   description:
-    'Cross the mist-draped wetlands where gentle and surging water currents carry Nima between sunken piers, gliding marsh Drifters, and the Great Wetland Lotus.',
+    'Cross the mist-draped wetlands where gentle and surging water currents carry Nima between sunken piers, gliding marsh Drifters, Mirel the Tide-Watcher, and the Great Wetland Lotus.',
   biomeTheme: 'marsh',
   width: 11800,
   height: 820,
@@ -44,78 +44,44 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
   spawnY: 440,
 
   platforms: [
-    // 01. Still Waters Edge (x: 40 .. 1100)
     { id: 'mm_p01_start', x: 40, y: 515, width: 410, height: 185 },
     { id: 'mm_p02_reed_bank', x: 520, y: 475, width: 290, height: 225 },
     { id: 'mm_p03_pier_west', x: 880, y: 445, width: 260, height: 255 },
-
-    // 02. Sunken Blossoms (x: 1100 .. 2250)
     { id: 'mm_p04_lily_basin', x: 1180, y: 560, width: 440, height: 140 },
     { id: 'mm_p05_arch_step', x: 1660, y: 425, width: 260, height: 275 },
     { id: 'mm_p06_marsh_terrace', x: 2010, y: 425, width: 280, height: 275 },
-
-    // 03. The Flowing Shallows — Water Current introduction (x: 2250 .. 3400)
     { id: 'mm_p07_current_bed_1', x: 2350, y: 520, width: 520, height: 180 },
     { id: 'mm_p08_current_isle', x: 2940, y: 445, width: 290, height: 255 },
-
-    // 04. The Drowned Archway & Cairn 1 (x: 3400 .. 4450)
-    // Root Bridge 1 spans from x: 3215 to x: 3443
     { id: 'mm_p09_cairn_1', x: 3425, y: 445, width: 410, height: 255 },
     { id: 'mm_p10_drowned_east', x: 3920, y: 410, width: 320, height: 290 },
     { id: 'mm_p11_secret_reeds', x: 3890, y: 255, width: 270, height: 48 },
-
-    // 05. Lagoon Drifters (x: 4450 .. 5800)
     { id: 'mm_p12_lagoon_mid', x: 4720, y: 395, width: 240, height: 305 },
     { id: 'mm_p13_cairn_2', x: 5420, y: 420, width: 390, height: 280 },
-
-    // 06. The Reed Current Gauntlet (x: 5800 .. 7050)
     { id: 'mm_p14_surge_floor', x: 5890, y: 515, width: 560, height: 185 },
     { id: 'mm_p15_surge_high', x: 6530, y: 415, width: 360, height: 285 },
-
-    // 07. The Sunken Bell Shrine — Optional lower Memory Echo (x: 7050 .. 8250)
     { id: 'mm_p16_bell_west', x: 6970, y: 475, width: 310, height: 225 },
     { id: 'mm_p17_bell_secret', x: 7040, y: 635, width: 290, height: 95 },
     { id: 'mm_p18_bell_east', x: 7640, y: 435, width: 320, height: 265 },
-
-    // 08. Twin Tide Span & Cairn 3 (x: 8250 .. 9450)
-    // Root Bridge 2 spans from x: 7945 to x: 8173
     { id: 'mm_p19_tide_hub', x: 8155, y: 435, width: 290, height: 265 },
-    // Root Bridge 3 spans from x: 8430 to x: 8658
     { id: 'mm_p20_cairn_3', x: 8640, y: 435, width: 410, height: 265 },
-
-    // 09. Lotus Approach (x: 9450 .. 10800)
     { id: 'mm_p21_approach_1', x: 9140, y: 405, width: 310, height: 295 },
     { id: 'mm_p22_approach_2', x: 9920, y: 380, width: 280, height: 320 },
     { id: 'mm_p23_approach_3', x: 10380, y: 370, width: 270, height: 330 },
-
-    // 10. The Marsh Lotus Sanctuary (x: 10800 .. 11800)
-    // Root Bridge 4 spans from x: 10635 to x: 10863
     { id: 'mm_p24_sanctuary', x: 10845, y: 370, width: 580, height: 330 },
   ],
 
   blooms: [
-    // Sub-area 02: Sunken Blossoms
     { id: 'mm_bloom_01', x: 1310, y: 455 },
     { id: 'mm_bloom_02', x: 1485, y: 405 },
     { id: 'mm_bloom_03', x: 1965, y: 380 },
-
-    // Sub-area 03: Flowing Shallows
     { id: 'mm_bloom_04', x: 2610, y: 420 },
     { id: 'mm_bloom_05', x: 2805, y: 390 },
-
-    // Sub-area 04: Secret upper reed shrine access
     { id: 'mm_bloom_06', x: 3845, y: 335 },
-
-    // Sub-area 06: Reed Current Gauntlet
     { id: 'mm_bloom_07', x: 6085, y: 415 },
     { id: 'mm_bloom_08', x: 6265, y: 380 },
     { id: 'mm_bloom_09', x: 6435, y: 365 },
-
-    // Sub-area 07: Sunken Bell Shrine climb
     { id: 'mm_bloom_10', x: 7375, y: 445 },
     { id: 'mm_bloom_11', x: 7525, y: 395 },
-
-    // Sub-area 09: Lotus Approach
     { id: 'mm_bloom_12', x: 10290, y: 345 },
   ],
 
@@ -162,11 +128,8 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
   ],
 
   waterCurrents: [
-    // Sub-area 03: Eastward tidal stream helping carry long jumps
     { id: 'mm_current_01', x: 2350, y: 380, width: 560, height: 150, driftVx: 72 },
-    // Sub-area 06: Westward counter-current requiring clean Bloom hops above the stream
     { id: 'mm_current_02', x: 5890, y: 370, width: 580, height: 155, driftVx: -68 },
-    // Sub-area 09: Gentle tailwind stream before Drifter 3
     { id: 'mm_current_03', x: 9120, y: 290, width: 420, height: 130, driftVx: 64 },
   ],
 
@@ -190,6 +153,57 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
       y: 595,
       title: 'Memory Echo IV · The Bell Beneath the Stillness',
       dialogueId: 'memory_marsh_02',
+    },
+  ],
+
+  npcs: [
+    {
+      id: 'npc_marsh_tide_watcher',
+      archetype: 'tide_watcher',
+      name: 'Mirel',
+      title: 'The Tide-Watcher',
+      x: 3540,
+      y: 445,
+      characterJournalId: 'char_tide_watcher',
+      questJournalId: 'quest_tide_watcher_chimes',
+      questTitle: 'Lanterns of the Tidal Stream',
+      greetingLines: [
+        'Welcome to the Drowned Archway, little traveler. My lantern has waited many moons to reflect a living seed.',
+        'The eastern Twin Tide Span has fallen silent. Carry your Wake light across the lagoon and rekindle the marsh lanterns so the tidal stream can sing.',
+      ],
+      activeQuestLines: [
+        'Watch for the Gloom Moths drifting above the reeds—your Wake pulse will scatter their dust if they swoop too close.',
+      ],
+      completedQuestLines: [
+        'Look how the water-arches shimmer with starlight! Thank you, Nima—the Great Wetland Lotus is ready to bloom.',
+      ],
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'mm_enemy_moth_01',
+      archetype: 'gloom_moth',
+      x: 3085,
+      y: 330,
+      flightRadiusX: 85,
+      flightRadiusY: 32,
+    },
+    {
+      id: 'mm_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 6710,
+      y: 415,
+      patrolMinX: 6570,
+      patrolMaxX: 6840,
+    },
+    {
+      id: 'mm_enemy_moth_02',
+      archetype: 'gloom_moth',
+      x: 8300,
+      y: 320,
+      flightRadiusX: 90,
+      flightRadiusY: 34,
     },
   ],
 
@@ -237,7 +251,7 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
     {
       index: 4,
       title: '04 · The Drowned Archway',
-      subtitle: 'Uncoil the wetland bridge and kindle the first marsh Resonance Cairn.',
+      subtitle: 'Kindle the Cairn and press F to speak with Mirel the Tide-Watcher.',
       minX: 3350,
       maxX: 4300,
     },
@@ -287,8 +301,7 @@ export const CHAPTER_02_MOONLIT_MARSH: CampaignLevelDefinition = {
 };
 
 /**
- * Chapter 03 — The Hollow Below (Milestone 5 Expanded 10-Sub-Area Adventure — Section 11)
- * Introduces Spore Vents, Crumbling Surfaces, Falling Debris, and deep vertical root caverns.
+ * Chapter 03 — The Hollow Below (10 Sub-Areas, 12,200 units)
  */
 export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
   id: 'hollow_below',
@@ -297,7 +310,7 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
   title: 'Chapter 03 · The Hollow Below',
   regionSubtitle: 'Subterranean root caverns, rhythmic spore vents, and echoing shafts',
   description:
-    'Descend into the shadowed root caverns beneath the Veilgrove, reading rhythmic spore vents, crumbling stone shelves, and falling cavern debris to awaken the Root-Heart.',
+    'Descend into the shadowed root caverns beneath the Veilgrove, meeting Bram the Rootkeeper and reading rhythmic spore vents, crumbling stone shelves, and cavern guardians to awaken the Root-Heart.',
   biomeTheme: 'cavern',
   width: 12200,
   height: 860,
@@ -305,73 +318,43 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
   spawnY: 470,
 
   platforms: [
-    // 01. Into the Root Caverns (x: 40 .. 1120)
     { id: 'hb_p01_start', x: 40, y: 545, width: 410, height: 195 },
     { id: 'hb_p02_descent_step', x: 510, y: 500, width: 290, height: 240 },
     { id: 'hb_p03_shelf_west', x: 870, y: 465, width: 270, height: 275 },
-
-    // 02. The Spore Shaft (x: 1120 .. 2320)
     { id: 'hb_p04_shaft_floor', x: 1210, y: 575, width: 440, height: 165 },
     { id: 'hb_p05_shaft_mid', x: 1730, y: 435, width: 270, height: 305 },
     { id: 'hb_p06_shaft_top', x: 2090, y: 385, width: 280, height: 355 },
-
-    // 03. Crumbling Shelf Passage & Cairn 1 (x: 2320 .. 3580)
     { id: 'hb_p07_shelf_mid', x: 2640, y: 425, width: 270, height: 315 },
-    // Root Bridge 1 spans from x: 2895 to x: 3123
     { id: 'hb_p08_cairn_1', x: 3105, y: 425, width: 420, height: 315 },
-
-    // 04. Luminous Fungus Grotto — Optional upper Memory Echo (x: 3580 .. 4750)
     { id: 'hb_p09_grotto_low', x: 3610, y: 495, width: 360, height: 245 },
     { id: 'hb_p10_grotto_secret', x: 3920, y: 275, width: 280, height: 48 },
     { id: 'hb_p11_grotto_east', x: 4320, y: 440, width: 330, height: 300 },
-
-    // 05. The Echoing Vent Chasm & Cairn 2 (x: 4750 .. 6050)
     { id: 'hb_p12_vent_walk_1', x: 4740, y: 485, width: 460, height: 255 },
     { id: 'hb_p13_cairn_2', x: 5560, y: 435, width: 410, height: 305 },
-
-    // 06. Falling Stalactite Gallery (x: 6050 .. 7350)
     { id: 'hb_p14_debris_run_1', x: 6060, y: 505, width: 520, height: 235 },
     { id: 'hb_p15_debris_run_2', x: 6680, y: 465, width: 460, height: 275 },
-
-    // 07. The Deep Root-Vault — Optional lower Memory Echo (x: 7350 .. 8550)
     { id: 'hb_p16_vault_west', x: 7230, y: 515, width: 310, height: 225 },
     { id: 'hb_p17_vault_secret', x: 7320, y: 665, width: 290, height: 95 },
     { id: 'hb_p18_vault_east', x: 7940, y: 445, width: 320, height: 295 },
-
-    // 08. Subterranean Drifter Abyss & Cairn 3 (x: 8550 .. 9850)
     { id: 'hb_p19_abyss_mid', x: 8740, y: 415, width: 250, height: 325 },
     { id: 'hb_p20_cairn_3', x: 9430, y: 430, width: 410, height: 310 },
-
-    // 09. The Heart-Vein Climb (x: 9850 .. 11100)
     { id: 'hb_p21_vein_1', x: 9930, y: 485, width: 380, height: 255 },
     { id: 'hb_p22_vein_2', x: 10440, y: 410, width: 290, height: 330 },
     { id: 'hb_p23_vein_top', x: 10840, y: 385, width: 270, height: 355 },
-
-    // 10. The Root-Heart Chamber (x: 11100 .. 12200)
-    // Root Bridge 3 spans from x: 11095 to x: 11323
     { id: 'hb_p24_sanctuary', x: 11305, y: 385, width: 580, height: 355 },
   ],
 
   blooms: [
-    // Sub-area 02: Vertical Spore Shaft climb
     { id: 'hb_bloom_01', x: 1385, y: 475 },
     { id: 'hb_bloom_02', x: 1565, y: 415 },
     { id: 'hb_bloom_03', x: 2025, y: 365 },
-
-    // Sub-area 04: Luminous Grotto + upper secret
     { id: 'hb_bloom_04', x: 3845, y: 355 },
     { id: 'hb_bloom_05', x: 4065, y: 425 },
     { id: 'hb_bloom_06', x: 4225, y: 390 },
-
-    // Sub-area 05: Vent chasm crossing
     { id: 'hb_bloom_07', x: 5295, y: 425 },
     { id: 'hb_bloom_08', x: 5455, y: 390 },
-
-    // Sub-area 07: Deep Root-Vault climb
     { id: 'hb_bloom_09', x: 7635, y: 465 },
     { id: 'hb_bloom_10', x: 7815, y: 415 },
-
-    // Sub-area 09: Heart-Vein climb
     { id: 'hb_bloom_11', x: 10120, y: 395 },
     { id: 'hb_bloom_12', x: 10315, y: 365 },
   ],
@@ -408,16 +391,12 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
   ],
 
   crumblingPlatforms: [
-    // Sub-area 03: Crumbling Shelf Passage
     { id: 'hb_crumble_01', x: 2435, y: 405, width: 144, standWindowSec: 0.9 },
-    // Sub-area 07: Deep Root-Vault
     { id: 'hb_crumble_02', x: 7580, y: 545, width: 144, standWindowSec: 0.9 },
-    // Sub-area 09: Heart-Vein step
     { id: 'hb_crumble_03', x: 10715, y: 395, width: 144, standWindowSec: 0.85 },
   ],
 
   sporeVents: [
-    // Sub-area 02, 04, 05, 09 rhythmic cavern vents
     { id: 'hb_vent_01', x: 1865, y: 435, burstHeight: 110, cycleSec: 3.8, phaseOffsetSec: 0.0 },
     { id: 'hb_vent_02', x: 3790, y: 495, burstHeight: 115, cycleSec: 3.6, phaseOffsetSec: 1.2 },
     { id: 'hb_vent_03', x: 4850, y: 485, burstHeight: 115, cycleSec: 3.6, phaseOffsetSec: 0.4 },
@@ -426,7 +405,6 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
   ],
 
   fallingDebris: [
-    // Sub-area 06: Falling Stalactite Gallery
     { id: 'hb_debris_01', x: 6230, ceilingY: 160, floorY: 505, cycleSec: 3.6, phaseOffsetSec: 0.3 },
     { id: 'hb_debris_02', x: 6410, ceilingY: 160, floorY: 505, cycleSec: 3.6, phaseOffsetSec: 2.1 },
     { id: 'hb_debris_03', x: 6840, ceilingY: 150, floorY: 465, cycleSec: 3.4, phaseOffsetSec: 1.0 },
@@ -447,6 +425,55 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
       y: 625,
       title: 'Memory Echo VI · Where Pip Was Born',
       dialogueId: 'memory_hollow_02',
+    },
+  ],
+
+  npcs: [
+    {
+      id: 'npc_hollow_rootkeeper',
+      archetype: 'rootkeeper',
+      name: 'Bram',
+      title: 'The Rootkeeper',
+      x: 3220,
+      y: 425,
+      characterJournalId: 'char_rootkeeper',
+      questJournalId: 'quest_rootkeeper_pact',
+      questTitle: 'Echoes of the Deep Pact',
+      greetingLines: [
+        'Little Pip... and the Seed-Bearer! I remember the hour the Root-Heart gave its last spark to form your wings, Pip.',
+        'The Stillness was woven here to keep the world-tree whole until you returned. Awaken the Root-Heart Chamber ahead so the upper conduits can breathe!',
+      ],
+      activeQuestLines: [
+        'In the Deep Root-Vault ahead, a Rootbound Sentinel still tests travelers. Jump over its root-wave or calm its core with a Wake pulse.',
+      ],
+      completedQuestLines: [
+        'The deep arteries pulse with warm gold once more. We shall meet again at the Heart of the Veil!',
+      ],
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'hb_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 4480,
+      y: 440,
+      patrolMinX: 4355,
+      patrolMaxX: 4615,
+    },
+    {
+      id: 'hb_enemy_sentinel_01',
+      archetype: 'rootbound_sentinel',
+      x: 8100,
+      y: 445,
+    },
+    {
+      id: 'hb_enemy_moth_01',
+      archetype: 'gloom_moth',
+      x: 8865,
+      y: 315,
+      flightRadiusX: 85,
+      flightRadiusY: 32,
     },
   ],
 
@@ -487,7 +514,7 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
     {
       index: 3,
       title: '03 · Crumbling Shelf Passage',
-      subtitle: 'Keep moving across ancient fractured shelves before they give way.',
+      subtitle: 'Cross the fractured shelves and press F to speak with Bram the Rootkeeper.',
       minX: 2380,
       maxX: 3560,
     },
@@ -515,7 +542,7 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
     {
       index: 7,
       title: '07 · The Deep Root-Vault',
-      subtitle: 'Explore the lower vault for Pip’s origin memory or ascend the cavern buds.',
+      subtitle: 'Explore the lower vault for Pip’s origin memory and calm the Rootbound Sentinel.',
       minX: 7200,
       maxX: 8280,
     },
@@ -544,18 +571,16 @@ export const CHAPTER_03_HOLLOW_BELOW: CampaignLevelDefinition = {
 };
 
 /**
- * Chapter 04 — The Windward Ruins (Milestone 5 Expanded 10-Sub-Area Climax — Section 12)
- * Introduces Wind Zones (horizontal gusts & vertical updrafts), sky-stone crumbling ledges,
- * multi-stage Drifter transfers, and the Great Crown Bloom ending.
+ * Chapter 04 — The Windward Ruins (10 Sub-Areas, 12,800 units)
  */
 export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
   id: 'windward_ruins',
   chapterId: 'windward_ruins',
   chapterNumber: 4,
   title: 'Chapter 04 · The Windward Ruins',
-  regionSubtitle: 'High skyward sanctuaries, updraft wind conduits, and the Great Crown Bloom',
+  regionSubtitle: 'High skyward sanctuaries, updraft wind conduits, and the Crown Sanctuary',
   description:
-    'Ascend the wind-swept stone towers high in the canopy crown, riding skyward updrafts, ancient root bridges, and cloud Drifters to awaken the Great Crown Bloom.',
+    'Ascend the wind-swept stone towers high in the canopy crown, riding skyward updrafts, ancient root bridges, and cloud Drifters to awaken the Crown Sanctuary and open the way to the Shattered Choir.',
   biomeTheme: 'ruins',
   width: 12800,
   height: 860,
@@ -563,75 +588,42 @@ export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
   spawnY: 460,
 
   platforms: [
-    // 01. The Skyward Steps (x: 40 .. 1150)
     { id: 'wr_p01_start', x: 40, y: 530, width: 410, height: 210 },
     { id: 'wr_p02_terrace', x: 520, y: 480, width: 300, height: 260 },
     { id: 'wr_p03_pillar', x: 900, y: 440, width: 270, height: 300 },
-
-    // 02. The Broken Aqueduct (x: 1150 .. 2350)
-    // Root Bridge 1 spans from x: 1155 to x: 1383
     { id: 'wr_p04_aqueduct_mid', x: 1365, y: 440, width: 320, height: 300 },
     { id: 'wr_p05_aqueduct_east', x: 2010, y: 395, width: 290, height: 345 },
-
-    // 03. Updraft Gallery & Cairn 1 (x: 2350 .. 3650)
     { id: 'wr_p06_updraft_launch', x: 2390, y: 465, width: 280, height: 275 },
     { id: 'wr_p07_cairn_1', x: 3060, y: 375, width: 420, height: 365 },
-
-    // 04. Windward Belfry — Optional high Memory Echo (x: 3650 .. 4850)
     { id: 'wr_p08_belfry_walk', x: 3580, y: 430, width: 350, height: 310 },
     { id: 'wr_p09_belfry_secret', x: 3950, y: 245, width: 280, height: 48 },
     { id: 'wr_p10_belfry_east', x: 4360, y: 395, width: 320, height: 345 },
-
-    // 05. Cloudroot Drifter Crossing & Cairn 2 (x: 4850 .. 6250)
     { id: 'wr_p11_cloud_isle', x: 5160, y: 375, width: 240, height: 365 },
     { id: 'wr_p12_cairn_2', x: 5840, y: 395, width: 410, height: 345 },
-
-    // 06. Shattered Sky-Stones (x: 6250 .. 7550)
     { id: 'wr_p13_skystone_mid', x: 6680, y: 420, width: 280, height: 320 },
     { id: 'wr_p14_skystone_east', x: 7340, y: 390, width: 320, height: 350 },
-
-    // 07. The Gale Conduit & Cairn 3 (x: 7550 .. 8950)
     { id: 'wr_p15_gale_floor', x: 7750, y: 475, width: 480, height: 265 },
-    // Root Bridge 2 spans from x: 8215 to x: 8443
     { id: 'wr_p16_cairn_3', x: 8425, y: 475, width: 410, height: 265 },
-
-    // 08. Spire of the First Choir — Optional lower Memory Echo (x: 8950 .. 10200)
     { id: 'wr_p17_choir_west', x: 8930, y: 435, width: 310, height: 305 },
     { id: 'wr_p18_choir_secret', x: 9020, y: 615, width: 290, height: 95 },
     { id: 'wr_p19_choir_east', x: 9680, y: 390, width: 330, height: 350 },
-
-    // 09. The Final Sky Ascent & Cairn 4 (x: 10200 .. 11650)
     { id: 'wr_p20_ascent_1', x: 10110, y: 370, width: 280, height: 370 },
     { id: 'wr_p21_ascent_2', x: 10920, y: 350, width: 280, height: 390 },
     { id: 'wr_p22_cairn_4', x: 11420, y: 350, width: 340, height: 390 },
-
-    // 10. The Crown Sanctuary (x: 11650 .. 12800)
-    // Root Bridge 3 spans from x: 11745 to x: 11973
     { id: 'wr_p23_sanctuary', x: 11955, y: 350, width: 640, height: 390 },
   ],
 
   blooms: [
-    // Sub-area 02: Broken Aqueduct
     { id: 'wr_bloom_01', x: 1785, y: 425 },
     { id: 'wr_bloom_02', x: 1925, y: 385 },
-
-    // Sub-area 03: Updraft Gallery (Bloom walkable top is at y - 44 = 401)
     { id: 'wr_bloom_03', x: 2845, y: 445 },
-
-    // Sub-area 04: Windward Belfry + secret upper
     { id: 'wr_bloom_04', x: 3895, y: 335 },
     { id: 'wr_bloom_05', x: 4095, y: 410 },
     { id: 'wr_bloom_06', x: 4245, y: 375 },
-
-    // Sub-area 06: Shattered Sky-Stones
     { id: 'wr_bloom_07', x: 6565, y: 395 },
     { id: 'wr_bloom_08', x: 7245, y: 375 },
-
-    // Sub-area 08: Spire of the First Choir
     { id: 'wr_bloom_09', x: 9385, y: 425 },
     { id: 'wr_bloom_10', x: 9545, y: 380 },
-
-    // Sub-area 09: Final Sky Ascent
     { id: 'wr_bloom_11', x: 10825, y: 345 },
     { id: 'wr_bloom_12', x: 11315, y: 335 },
   ],
@@ -677,16 +669,12 @@ export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
   ],
 
   windZones: [
-    // Sub-area 03: Updraft & tailwind lifting Nima across the sky gap to Cairn 1
     { id: 'wr_wind_01', x: 2640, y: 240, width: 420, height: 260, driftVx: 78, driftVy: -105 },
-    // Sub-area 07: Gale Conduit updraft lifting Nima cleanly over the twin bramble patches
     { id: 'wr_wind_02', x: 7810, y: 260, width: 360, height: 215, driftVx: 65, driftVy: -115 },
-    // Sub-area 09: High-altitude tailwind assisting the final Drifter & Bloom ascent
     { id: 'wr_wind_03', x: 10390, y: 210, width: 520, height: 220, driftVx: 70, driftVy: -65 },
   ],
 
   crumblingPlatforms: [
-    // Sub-area 06: Shattered Sky-Stones
     { id: 'wr_crumble_01', x: 6340, y: 405, width: 144, standWindowSec: 0.85 },
     { id: 'wr_crumble_02', x: 7040, y: 395, width: 144, standWindowSec: 0.85 },
   ],
@@ -713,6 +701,31 @@ export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
       y: 575,
       title: 'Memory Echo VIII · The Promise of Wispwake',
       dialogueId: 'memory_ruins_02',
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'wr_enemy_moth_01',
+      archetype: 'gloom_moth',
+      x: 4520,
+      y: 295,
+      flightRadiusX: 90,
+      flightRadiusY: 35,
+    },
+    {
+      id: 'wr_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 7500,
+      y: 390,
+      patrolMinX: 7370,
+      patrolMaxX: 7630,
+    },
+    {
+      id: 'wr_enemy_sentinel_01',
+      archetype: 'rootbound_sentinel',
+      x: 11060,
+      y: 350,
     },
   ],
 
@@ -788,7 +801,7 @@ export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
     {
       index: 8,
       title: '08 · Spire of the First Choir',
-      subtitle: 'Uncover the final Memory Echo below or climb the choir blooms.',
+      subtitle: 'Uncover the Memory Echo below or climb the choir blooms.',
       minX: 8880,
       maxX: 10050,
     },
@@ -802,9 +815,657 @@ export const CHAPTER_04_WINDWARD_RUINS: CampaignLevelDefinition = {
     {
       index: 10,
       title: '10 · The Crown Sanctuary',
-      subtitle: 'Release Wake beside the Great Crown Bloom to unite the entire Veilgrove in light.',
+      subtitle: 'Release Wake beside the Crown Bloom to open the harmonic bridges to the Shattered Choir.',
       minX: 11850,
       maxX: 12800,
+    },
+  ],
+};
+
+/**
+ * Chapter 05 — The Shattered Choir (Milestone 6 New Campaign Chapter — Section 10)
+ * 10 Sub-Areas, 24 Platform Formations, 4 Checkpoints, Resonance Bells, Bellkeeper NPC,
+ * Parametric Hostile Creatures, and Harmonic Sanctuary Climax.
+ */
+export const CHAPTER_05_SHATTERED_CHOIR: CampaignLevelDefinition = {
+  id: 'shattered_choir',
+  chapterId: 'shattered_choir',
+  chapterNumber: 5,
+  title: 'Chapter 05 · The Shattered Choir',
+  regionSubtitle: 'Suspended stone bell sanctuaries, resonance crystals, and silver-green boughs',
+  description:
+    'Journey across floating stone belfries where Wake pulses ring ancient bronze Resonance Bells, awakening harmonic flower chains and guiding Lyra the Bellkeeper to unseal the path to the Heart.',
+  biomeTheme: 'choir',
+  width: 13000,
+  height: 860,
+  spawnX: 160,
+  spawnY: 455,
+
+  platforms: [
+    // 01. The Silent Nave (x: 40 .. 1160)
+    { id: 'sc5_p01_start', x: 40, y: 525, width: 420, height: 215 },
+    { id: 'sc5_p02_nave_step', x: 520, y: 480, width: 300, height: 260 },
+    { id: 'sc5_p03_nave_arch', x: 890, y: 440, width: 280, height: 300 },
+
+    // 02. First Resonance Belfry (x: 1160 .. 2380)
+    { id: 'sc5_p04_belfry_west', x: 1240, y: 440, width: 340, height: 300 },
+    { id: 'sc5_p05_belfry_east', x: 1990, y: 400, width: 310, height: 340 },
+
+    // 03. Harmonic Root Span & Cairn 1 + Bellkeeper NPC (x: 2380 .. 3620)
+    { id: 'sc5_p06_span_launch', x: 2380, y: 430, width: 300, height: 310 },
+    // Root Bridge 1 spans from 2665 to 2893
+    { id: 'sc5_p07_cairn_1', x: 2875, y: 430, width: 460, height: 310 },
+
+    // 04. The Silver-Moss Overlook — Optional upper Memory Echo IX (x: 3620 .. 4820)
+    { id: 'sc5_p08_moss_low', x: 3430, y: 470, width: 340, height: 270 },
+    { id: 'sc5_p09_moss_secret', x: 3840, y: 250, width: 290, height: 48 },
+    { id: 'sc5_p10_moss_east', x: 4260, y: 410, width: 340, height: 330 },
+
+    // 05. Choir Drifter Arches & Cairn 2 (x: 4820 .. 6220)
+    { id: 'sc5_p11_drifter_hub', x: 5090, y: 385, width: 250, height: 355 },
+    { id: 'sc5_p12_cairn_2', x: 5790, y: 405, width: 410, height: 335 },
+
+    // 06. Chime-Wind Gallery (x: 6220 .. 7620)
+    { id: 'sc5_p13_wind_launch', x: 6290, y: 465, width: 320, height: 275 },
+    { id: 'sc5_p14_wind_mid', x: 6960, y: 380, width: 290, height: 360 },
+    { id: 'sc5_p15_wind_east', x: 7420, y: 415, width: 310, height: 325 },
+
+    // 07. The Whispering Undercroft — Sentinel + lower Memory Echo X (x: 7620 .. 8920)
+    { id: 'sc5_p16_court_floor', x: 7810, y: 445, width: 480, height: 295 },
+    { id: 'sc5_p17_court_secret', x: 7920, y: 625, width: 290, height: 95 },
+    // Root Bridge 2 spans from 8275 to 8503
+    { id: 'sc5_p18_cairn_3', x: 8485, y: 445, width: 420, height: 295 },
+
+    // 08. Threefold Bell Ascent (x: 8920 .. 10320)
+    { id: 'sc5_p19_bell_step_1', x: 8990, y: 415, width: 310, height: 325 },
+    { id: 'sc5_p20_bell_step_2', x: 9690, y: 375, width: 310, height: 365 },
+
+    // 09. Resonance Sky-Bridge & Cairn 4 (x: 10320 .. 11850)
+    { id: 'sc5_p21_sky_isle', x: 10380, y: 375, width: 280, height: 365 },
+    { id: 'sc5_p22_sky_high', x: 11120, y: 350, width: 290, height: 390 },
+    { id: 'sc5_p23_cairn_4', x: 11590, y: 350, width: 360, height: 390 },
+
+    // 10. The Grand Carillon Sanctuary (x: 11850 .. 13000)
+    // Root Bridge 3 spans from 11935 to 12163
+    { id: 'sc5_p24_sanctuary', x: 12145, y: 350, width: 650, height: 390 },
+  ],
+
+  blooms: [
+    { id: 'sc5_bloom_01', x: 1685, y: 430 },
+    { id: 'sc5_bloom_02', x: 1845, y: 395 },
+    { id: 'sc5_bloom_03', x: 3785, y: 340 },
+    { id: 'sc5_bloom_04', x: 3985, y: 420 },
+    { id: 'sc5_bloom_05', x: 4135, y: 385 },
+    { id: 'sc5_bloom_06', x: 6785, y: 420 },
+    { id: 'sc5_bloom_07', x: 7335, y: 385 },
+    { id: 'sc5_bloom_08', x: 9395, y: 395 },
+    { id: 'sc5_bloom_09', x: 9555, y: 360 },
+    { id: 'sc5_bloom_10', x: 10110, y: 365 },
+    { id: 'sc5_bloom_11', x: 10255, y: 345 },
+    { id: 'sc5_bloom_12', x: 11485, y: 340 },
+  ],
+
+  rootBridges: [
+    { id: 'sc5_root_01', x: 2665, y: 442 },
+    { id: 'sc5_root_02', x: 8275, y: 457 },
+    { id: 'sc5_root_03', x: 11935, y: 362 },
+  ],
+
+  drifters: [
+    {
+      id: 'sc5_drifter_01',
+      startX: 4690,
+      startY: 395,
+      endX: 4995,
+      endY: 370,
+      cycleDuration: 5.3,
+    },
+    {
+      id: 'sc5_drifter_02',
+      startX: 5430,
+      startY: 370,
+      endX: 5705,
+      endY: 395,
+      cycleDuration: 5.3,
+    },
+    {
+      id: 'sc5_drifter_03',
+      startX: 10750,
+      startY: 365,
+      endX: 11030,
+      endY: 345,
+      cycleDuration: 5.1,
+    },
+  ],
+
+  hazards: [
+    { id: 'sc5_haz_01', x: 2140, y: 400, width: 128 },
+    { id: 'sc5_haz_02', x: 3600, y: 470, width: 128 },
+    { id: 'sc5_haz_03', x: 6450, y: 465, width: 128 },
+    { id: 'sc5_haz_04', x: 9145, y: 415, width: 128 },
+  ],
+
+  windZones: [
+    { id: 'sc5_wind_01', x: 6580, y: 240, width: 390, height: 250, driftVx: 74, driftVy: -108 },
+    { id: 'sc5_wind_02', x: 10660, y: 210, width: 460, height: 220, driftVx: 66, driftVy: -68 },
+  ],
+
+  crumblingPlatforms: [
+    { id: 'sc5_crumble_01', x: 1110, y: 435, width: 144, standWindowSec: 0.9 },
+    { id: 'sc5_crumble_02', x: 7660, y: 435, width: 144, standWindowSec: 0.88 },
+  ],
+
+  sporeVents: [
+    { id: 'sc5_vent_01', x: 7105, y: 380, burstHeight: 115, cycleSec: 3.6, phaseOffsetSec: 0.5 },
+  ],
+
+  resonanceBells: [
+    {
+      id: 'bell_choir_01',
+      x: 1490,
+      y: 440,
+      linkedBloomIds: ['sc5_bloom_01', 'sc5_bloom_02'],
+      resonanceDurationSec: 8.0,
+    },
+    {
+      id: 'bell_choir_02',
+      x: 9240,
+      y: 415,
+      linkedBloomIds: ['sc5_bloom_08', 'sc5_bloom_09'],
+      resonanceDurationSec: 8.5,
+    },
+    {
+      id: 'bell_choir_03',
+      x: 9920,
+      y: 375,
+      linkedBloomIds: ['sc5_bloom_10', 'sc5_bloom_11'],
+      resonanceDurationSec: 8.5,
+    },
+  ],
+
+  memoryEchoes: [
+    {
+      id: 'mem_choir_first_note',
+      x: 3985,
+      y: 210,
+      title: 'Memory Echo IX · The Bellkeeper’s First Chord',
+      dialogueId: 'memory_choir_01',
+    },
+    {
+      id: 'mem_choir_silent_hymn',
+      x: 8065,
+      y: 585,
+      title: 'Memory Echo X · Hymn of the Silver Moss',
+      dialogueId: 'memory_choir_02',
+    },
+  ],
+
+  npcs: [
+    {
+      id: 'npc_choir_bellkeeper',
+      archetype: 'bellkeeper',
+      name: 'Lyra',
+      title: 'The Bellkeeper',
+      x: 3160,
+      y: 430,
+      characterJournalId: 'char_bellkeeper',
+      questJournalId: 'quest_bellkeeper_harmony',
+      questTitle: 'The Threefold Choir Chord',
+      greetingLines: [
+        'You brought the living seed to the Shattered Choir! Hear how the bronze belfries hum just from your closeness, Nima.',
+        'Whenever you release a Wake pulse beside a Resonance Bell, its harmonic wave awakens every linked flower across the chasm. Ring the Threefold Bells ahead to unseal the Heart of the Veil!',
+      ],
+      activeQuestLines: [
+        'Each Resonance Bell stays singing for several seconds—use its golden sound-wave to cross the suspended sanctuaries!',
+      ],
+      completedQuestLines: [
+        'All three harmonic chords are ringing together! Awaken the Grand Carillon Bloom ahead—the Heart of the Veil awaits you!',
+      ],
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'sc5_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 4430,
+      y: 410,
+      patrolMinX: 4300,
+      patrolMaxX: 4560,
+    },
+    {
+      id: 'sc5_enemy_moth_01',
+      archetype: 'gloom_moth',
+      x: 5215,
+      y: 280,
+      flightRadiusX: 90,
+      flightRadiusY: 34,
+    },
+    {
+      id: 'sc5_enemy_sentinel_01',
+      archetype: 'rootbound_sentinel',
+      x: 8040,
+      y: 445,
+    },
+  ],
+
+  checkpoint: {
+    id: 'cp_choir_01',
+    x: 3040,
+    y: 430,
+  },
+
+  checkpoints: [
+    { id: 'cp_choir_01', x: 3040, y: 430 },
+    { id: 'cp_choir_02', x: 5990, y: 405 },
+    { id: 'cp_choir_03', x: 8685, y: 445 },
+    { id: 'cp_choir_04', x: 11755, y: 350 },
+  ],
+
+  ancientBloom: {
+    id: 'ancient_bloom_choir',
+    x: 12520,
+    y: 350,
+  },
+
+  beats: [
+    {
+      index: 1,
+      title: '01 · The Silent Nave',
+      subtitle: 'Step onto the suspended stone sanctuaries of the Shattered Choir.',
+      minX: 0,
+      maxX: 1180,
+    },
+    {
+      index: 2,
+      title: '02 · First Resonance Belfry',
+      subtitle: 'Pulse Wake beside the bronze Resonance Bell to awaken the distant choir buds.',
+      minX: 1180,
+      maxX: 2360,
+    },
+    {
+      index: 3,
+      title: '03 · Harmonic Root Span',
+      subtitle: 'Uncoil the bridge, kindle the Cairn, and press F to speak with Lyra the Bellkeeper.',
+      minX: 2360,
+      maxX: 3560,
+    },
+    {
+      index: 4,
+      title: '04 · The Silver-Moss Overlook',
+      subtitle: 'Climb the high resonance blooms for a Memory Echo or calm the Hushed Stalker.',
+      minX: 3560,
+      maxX: 4680,
+    },
+    {
+      index: 5,
+      title: '05 · Choir Drifter Arches',
+      subtitle: 'Transfer between the suspended Drifters while watching the Gloom Moth’s arc.',
+      minX: 4680,
+      maxX: 6220,
+    },
+    {
+      index: 6,
+      title: '06 · Chime-Wind Gallery',
+      subtitle: 'Ride the harmonic wind updraft across the floating belfry pillars.',
+      minX: 6220,
+      maxX: 7650,
+    },
+    {
+      index: 7,
+      title: '07 · The Whispering Undercroft',
+      subtitle: 'Vault the Rootbound Sentinel’s wave—or descend to the hidden choir vault.',
+      minX: 7650,
+      maxX: 8920,
+    },
+    {
+      index: 8,
+      title: '08 · Threefold Bell Ascent',
+      subtitle: 'Ring the paired Resonance Bells in sequence to open the high harmonic flower path.',
+      minX: 8920,
+      maxX: 10350,
+    },
+    {
+      index: 9,
+      title: '09 · Resonance Sky-Bridge',
+      subtitle: 'Ride the final choir Drifter and updraft stream to the upper sanctuary.',
+      minX: 10350,
+      maxX: 11920,
+    },
+    {
+      index: 10,
+      title: '10 · The Grand Carillon Sanctuary',
+      subtitle: 'Awaken the Grand Choir Bloom to unseal the innermost Heart of the Veil.',
+      minX: 11920,
+      maxX: 13000,
+    },
+  ],
+};
+
+/**
+ * Chapter 06 — The Heart of the Veil (Milestone 6 Final Campaign Chapter — Section 11)
+ * 10 Sub-Areas, 25 Platform Formations, 4 Checkpoints, Golden Sap Rivers, Wind Conduits,
+ * Resonance Bells, Rootkeeper Vigil, Multi-Stage Heart Guardian Climax, and First Seed Cradle.
+ */
+export const CHAPTER_06_HEART_OF_VEIL: CampaignLevelDefinition = {
+  id: 'heart_of_veil',
+  chapterId: 'heart_of_veil',
+  chapterNumber: 6,
+  title: 'Chapter 06 · The Heart of the Veil',
+  regionSubtitle: 'Sacred inner root cathedral, golden sap-rivers, and the First Seed Cradle',
+  description:
+    'Enter the sacred core of the Veilgrove where golden sap-rivers, thermal updrafts, and resonance bells converge. Calm the Heart Guardians and awaken the First Seed Cradle to unite the world in dawn.',
+  biomeTheme: 'heart',
+  width: 13400,
+  height: 860,
+  spawnX: 160,
+  spawnY: 455,
+
+  platforms: [
+    // 01. Threshold of the Living Core (x: 40 .. 1180)
+    { id: 'hv6_p01_start', x: 40, y: 525, width: 420, height: 215 },
+    { id: 'hv6_p02_artery_step', x: 520, y: 480, width: 300, height: 260 },
+    { id: 'hv6_p03_artery_arch', x: 890, y: 440, width: 280, height: 300 },
+
+    // 02. Golden Sap-River Crossing (x: 1180 .. 2420)
+    { id: 'hv6_p04_sap_bed', x: 1240, y: 515, width: 540, height: 225 },
+    { id: 'hv6_p05_sap_terrace', x: 1860, y: 430, width: 320, height: 310 },
+
+    // 03. The Rootkeeper's Vigil & Cairn 1 (x: 2420 .. 3680)
+    { id: 'hv6_p06_vigil_west', x: 2420, y: 430, width: 300, height: 310 },
+    // Root Bridge 1 spans from 2705 to 2933
+    { id: 'hv6_p07_cairn_1', x: 2915, y: 430, width: 480, height: 310 },
+
+    // 04. Cradle of the Golden Sap — Optional upper Memory Echo XI (x: 3680 .. 4920)
+    { id: 'hv6_p08_vein_low', x: 3490, y: 470, width: 350, height: 270 },
+    { id: 'hv6_p09_vein_secret', x: 3910, y: 245, width: 290, height: 48 },
+    { id: 'hv6_p10_vein_east', x: 4340, y: 405, width: 340, height: 335 },
+
+    // 05. Heart-Stream Drifters & Cairn 2 (x: 4920 .. 6320)
+    { id: 'hv6_p11_heart_isle', x: 5170, y: 380, width: 250, height: 360 },
+    { id: 'hv6_p12_cairn_2', x: 5880, y: 400, width: 420, height: 340 },
+
+    // 06. The Convergence Conduit (x: 6320 .. 7760)
+    { id: 'hv6_p13_conv_launch', x: 6380, y: 465, width: 340, height: 275 },
+    { id: 'hv6_p14_conv_mid', x: 7060, y: 380, width: 300, height: 360 },
+    { id: 'hv6_p15_conv_east', x: 7530, y: 415, width: 310, height: 325 },
+
+    // 07. Vault of the First Lullaby — Optional lower Memory Echo XII + Cairn 3 (x: 7760 .. 9120)
+    { id: 'hv6_p16_vault_floor', x: 7940, y: 445, width: 460, height: 295 },
+    { id: 'hv6_p17_vault_secret', x: 8040, y: 625, width: 290, height: 95 },
+    // Root Bridge 2 spans from 8385 to 8613
+    { id: 'hv6_p18_cairn_3', x: 8595, y: 445, width: 430, height: 295 },
+
+    // 08. Harmonic Sap Ascent (x: 9120 .. 10420)
+    { id: 'hv6_p19_ascent_1', x: 9120, y: 415, width: 320, height: 325 },
+    { id: 'hv6_p20_ascent_2', x: 9840, y: 375, width: 320, height: 365 },
+
+    // 09. Sanctuary of the Heart Guardians & Cairn 4 (x: 10420 .. 12120)
+    { id: 'hv6_p21_guard_west', x: 10440, y: 375, width: 460, height: 365 },
+    { id: 'hv6_p22_guard_east', x: 11360, y: 350, width: 320, height: 390 },
+    { id: 'hv6_p23_cairn_4', x: 11810, y: 350, width: 360, height: 390 },
+
+    // 10. The First Seed Cradle (x: 12120 .. 13400)
+    // Root Bridge 3 spans from 12155 to 12383
+    { id: 'hv6_p24_sanctuary', x: 12365, y: 350, width: 720, height: 390 },
+  ],
+
+  blooms: [
+    { id: 'hv6_bloom_01', x: 1510, y: 415 },
+    { id: 'hv6_bloom_02', x: 1695, y: 385 },
+    { id: 'hv6_bloom_03', x: 2295, y: 395 },
+    { id: 'hv6_bloom_04', x: 3855, y: 335 },
+    { id: 'hv6_bloom_05', x: 4065, y: 415 },
+    { id: 'hv6_bloom_06', x: 4215, y: 380 },
+    { id: 'hv6_bloom_07', x: 6895, y: 415 },
+    { id: 'hv6_bloom_08', x: 7435, y: 385 },
+    { id: 'hv6_bloom_09', x: 9545, y: 395 },
+    { id: 'hv6_bloom_10', x: 9705, y: 360 },
+    { id: 'hv6_bloom_11', x: 10290, y: 355 },
+    { id: 'hv6_bloom_12', x: 11710, y: 340 },
+  ],
+
+  rootBridges: [
+    { id: 'hv6_root_01', x: 2705, y: 442 },
+    { id: 'hv6_root_02', x: 8385, y: 457 },
+    { id: 'hv6_root_03', x: 12155, y: 362 },
+  ],
+
+  drifters: [
+    {
+      id: 'hv6_drifter_01',
+      startX: 4770,
+      startY: 390,
+      endX: 5075,
+      endY: 365,
+      cycleDuration: 5.2,
+    },
+    {
+      id: 'hv6_drifter_02',
+      startX: 5510,
+      startY: 365,
+      endX: 5790,
+      endY: 390,
+      cycleDuration: 5.2,
+    },
+    {
+      id: 'hv6_drifter_03',
+      startX: 10985,
+      startY: 365,
+      endX: 11265,
+      endY: 345,
+      cycleDuration: 5.0,
+    },
+  ],
+
+  hazards: [
+    { id: 'hv6_haz_01', x: 1510, y: 515, width: 128 },
+    { id: 'hv6_haz_02', x: 3660, y: 470, width: 128 },
+    { id: 'hv6_haz_03', x: 6550, y: 465, width: 128 },
+    { id: 'hv6_haz_04', x: 9280, y: 415, width: 128 },
+  ],
+
+  waterCurrents: [
+    // Golden sap river current in Sub-area 02
+    { id: 'hv6_current_01', x: 1240, y: 365, width: 560, height: 150, driftVx: 74 },
+  ],
+
+  windZones: [
+    { id: 'hv6_wind_01', x: 6680, y: 235, width: 390, height: 250, driftVx: 76, driftVy: -110 },
+    { id: 'hv6_wind_02', x: 10890, y: 205, width: 470, height: 220, driftVx: 68, driftVy: -70 },
+  ],
+
+  crumblingPlatforms: [
+    { id: 'hv6_crumble_01', x: 2210, y: 420, width: 144, standWindowSec: 0.9 },
+    { id: 'hv6_crumble_02', x: 7775, y: 435, width: 144, standWindowSec: 0.88 },
+  ],
+
+  sporeVents: [
+    { id: 'hv6_vent_01', x: 7210, y: 380, burstHeight: 115, cycleSec: 3.5, phaseOffsetSec: 0.4 },
+  ],
+
+  fallingDebris: [
+    { id: 'hv6_debris_01', x: 9990, ceilingY: 130, floorY: 375, cycleSec: 3.4, phaseOffsetSec: 0.7 },
+  ],
+
+  resonanceBells: [
+    {
+      id: 'bell_heart_01',
+      x: 9385,
+      y: 415,
+      linkedBloomIds: ['hv6_bloom_09', 'hv6_bloom_10'],
+      resonanceDurationSec: 8.5,
+    },
+    {
+      id: 'bell_heart_02',
+      x: 10820,
+      y: 375,
+      linkedBloomIds: ['hv6_bloom_11', 'hv6_bloom_12'],
+      resonanceDurationSec: 9.0,
+    },
+  ],
+
+  memoryEchoes: [
+    {
+      id: 'mem_heart_sap_cradle',
+      x: 4055,
+      y: 205,
+      title: 'Memory Echo XI · Cradle of the Golden Sap',
+      dialogueId: 'memory_heart_01',
+    },
+    {
+      id: 'mem_heart_eternal_dawn',
+      x: 8185,
+      y: 585,
+      title: 'Memory Echo XII · Song of the Waking World',
+      dialogueId: 'memory_heart_02',
+    },
+  ],
+
+  npcs: [
+    {
+      id: 'npc_heart_rootkeeper',
+      archetype: 'rootkeeper',
+      name: 'Bram',
+      title: 'The Rootkeeper',
+      x: 3250,
+      y: 430,
+      characterJournalId: 'char_rootkeeper',
+      questJournalId: 'quest_rootkeeper_pact',
+      questTitle: 'Echoes of the Deep Pact',
+      greetingLines: [
+        'Look around you, Nima—every root bridge you uncoiled and every bell you rang has poured golden sap-light into the Heart of the Veil.',
+        'Ahead lies the First Seed Cradle where your seed was born. Calm the final Heart Guardians with your Wake light and bring morning back to our world!',
+      ],
+      activeQuestLines: [
+        'Ring the Resonance Bell in the Guardian Sanctuary to awaken the final sky-blooms!',
+      ],
+      completedQuestLines: [
+        'The Stillness is parting at last. Go forth to the First Seed Cradle, Nima and Pip!',
+      ],
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'hv6_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 4510,
+      y: 405,
+      patrolMinX: 4380,
+      patrolMaxX: 4640,
+    },
+    {
+      id: 'hv6_enemy_moth_01',
+      archetype: 'gloom_moth',
+      x: 5295,
+      y: 275,
+      flightRadiusX: 92,
+      flightRadiusY: 35,
+    },
+    {
+      id: 'hv6_enemy_sentinel_01',
+      archetype: 'rootbound_sentinel',
+      x: 8170,
+      y: 445,
+    },
+    {
+      id: 'hv6_enemy_sentinel_climax',
+      archetype: 'rootbound_sentinel',
+      x: 10650,
+      y: 375,
+    },
+  ],
+
+  checkpoint: {
+    id: 'cp_heart_01',
+    x: 3120,
+    y: 430,
+  },
+
+  checkpoints: [
+    { id: 'cp_heart_01', x: 3120, y: 430 },
+    { id: 'cp_heart_02', x: 6090, y: 400 },
+    { id: 'cp_heart_03', x: 8810, y: 445 },
+    { id: 'cp_heart_04', x: 11975, y: 350 },
+  ],
+
+  ancientBloom: {
+    id: 'ancient_bloom_heart',
+    x: 12780,
+    y: 350,
+  },
+
+  beats: [
+    {
+      index: 1,
+      title: '01 · Threshold of the Living Core',
+      subtitle: 'Enter the sacred innermost root cathedral of the Veilgrove.',
+      minX: 0,
+      maxX: 1180,
+    },
+    {
+      index: 2,
+      title: '02 · Golden Sap-River Crossing',
+      subtitle: 'Ride the luminous sap-stream and chain the core blossoms.',
+      minX: 1180,
+      maxX: 2400,
+    },
+    {
+      index: 3,
+      title: '03 · The Rootkeeper’s Vigil',
+      subtitle: 'Kindle the Cairn and press F to speak with Bram the Rootkeeper.',
+      minX: 2400,
+      maxX: 3650,
+    },
+    {
+      index: 4,
+      title: '04 · Cradle of the Golden Sap',
+      subtitle: 'Climb the high sap-vein blooms for Memory Echo XI or cross the lower root arch.',
+      minX: 3650,
+      maxX: 4750,
+    },
+    {
+      index: 5,
+      title: '05 · Heart-Stream Drifters',
+      subtitle: 'Ride the paired Heart Drifters across the glowing cathedral nave.',
+      minX: 4750,
+      maxX: 6320,
+    },
+    {
+      index: 6,
+      title: '06 · The Convergence Conduit',
+      subtitle: 'Soar up the thermal sap-updraft and time the cavern vent.',
+      minX: 6320,
+      maxX: 7760,
+    },
+    {
+      index: 7,
+      title: '07 · Vault of the First Lullaby',
+      subtitle: 'Uncover the final Memory Echo below and uncoil the sanctuary bridge.',
+      minX: 7760,
+      maxX: 9100,
+    },
+    {
+      index: 8,
+      title: '08 · Harmonic Sap Ascent',
+      subtitle: 'Ring the Resonance Bell to awaken the high sap-blooms.',
+      minX: 9100,
+      maxX: 10420,
+    },
+    {
+      index: 9,
+      title: '09 · Sanctuary of the Heart Guardians',
+      subtitle: 'Calm the Heart Sentinel with Wake, ring the bell, and catch the final Drifter.',
+      minX: 10420,
+      maxX: 12120,
+    },
+    {
+      index: 10,
+      title: '10 · The First Seed Cradle',
+      subtitle: 'Release Wake beside the First Seed Cradle to unite the entire Veilgrove in eternal dawn.',
+      minX: 12120,
+      maxX: 13400,
     },
   ],
 };
@@ -814,6 +1475,8 @@ export const CAMPAIGN_CHAPTERS: CampaignLevelDefinition[] = [
   CHAPTER_02_MOONLIT_MARSH,
   CHAPTER_03_HOLLOW_BELOW,
   CHAPTER_04_WINDWARD_RUINS,
+  CHAPTER_05_SHATTERED_CHOIR,
+  CHAPTER_06_HEART_OF_VEIL,
 ];
 
 export function getCampaignChapter(id: CampaignChapterId): CampaignLevelDefinition {
@@ -821,27 +1484,7 @@ export function getCampaignChapter(id: CampaignChapterId): CampaignLevelDefiniti
 }
 
 /**
- * Applies Story Difficulty scaling (Section 13) to a Campaign LevelDefinition without
- * making Nima's movement sluggish or altering her responsive physics constants.
- *
- * - Easy:
- *   - Bloom duration: 6.8s (generous crossing window)
- *   - Crumbling ledge window: 1.35s
- *   - Drifter cycle duration: +15% slower/calmer
- *   - Fewer hazards (removes every second thorn patch / falling debris)
- *   - All 4 checkpoints active
- * - Medium:
- *   - Canonical authored layout (Bloom 5.2s, Crumble 0.95s, all 4 checkpoints)
- * - Hard:
- *   - Bloom duration: 4.1s (requires crisp chaining)
- *   - Crumbling ledge window: 0.72s
- *   - Drifter cycle duration: 10% faster
- *   - Spore vents cycle 12% faster
- * - Extreme:
- *   - Bloom duration: 3.35s (tight mastery timing)
- *   - Crumbling ledge window: 0.56s
- *   - Drifter cycle duration: 18% faster
- *   - Checkpoints reduced to 2 major checkpoints per chapter
+ * Applies Story Difficulty scaling across all 6 Campaign Chapters (`easy`, `medium`, `hard`, `extreme`).
  */
 export function applyStoryDifficultyToLevel(
   baseLevel: LevelDefinition,
@@ -901,7 +1544,6 @@ export function applyStoryDifficultyToLevel(
       }));
     }
     if (difficulty === 'extreme' && cloned.checkpoints && cloned.checkpoints.length >= 3) {
-      // Keep mid-chapter and pre-sanctuary checkpoints on Extreme
       cloned.checkpoints = cloned.checkpoints.filter(
         (_, idx, arr) => idx === 1 || idx === arr.length - 1
       );

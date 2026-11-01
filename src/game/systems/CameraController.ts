@@ -1,28 +1,37 @@
 import Phaser from 'phaser';
 import { activePhysicsTuning } from '../config/physicsTuning';
-import { Player } from '../entities/player/Player';
 import { SaveManager } from './SaveManager';
+import { Player } from '../entities/player/Player';
 
 /**
- * CameraController (Section 6.4 of the Visual Bible):
- * - Side-follow camera with a modest horizontal dead zone.
- * - Default player screen position: ~42% from left edge (leaving more view ahead than behind).
- * - Vertical framing: ~58% from top.
- * - Smooth, time-based exponential following (`1 - Math.exp(-k * dt)`).
- * - Small look-ahead while running, clamped so the camera never reveals a hazard too late.
- * - Screen shake rare, subtle, and disabled by default or toggleable in Settings.
+ * CameraController — Responsive Landscape & Native Portrait Camera System.
+ *
+ * Adapts smoothly to both landscape (`960×540`) and native portrait (`360×640` .. `480×640`)
+ * logical viewports without ever making Nima or platforms tiny:
+ * - In landscape: positions Nima around 42% from left, 58% from top with smooth forward look-ahead.
+ * - In portrait: uses a narrower horizontal window while keeping generous vertical visibility
+ *   (`anchorY = 0.54` so platforms stay well above the bottom thumb controls) and subtle forward
+ *   camera anticipation (`±56px` in portrait, `±68px` in landscape) in the direction of travel.
+ * - Supports live orientation transitions (`onViewportResized`) without losing focus or revealing
+ *   out-of-bounds areas.
  */
 export class CameraController {
   private readonly scene: Phaser.Scene;
   private readonly camera: Phaser.Cameras.Scene2D.Camera;
-  private readonly levelWidth: number;
-  private readonly levelHeight: number;
+  private levelWidth: number;
+  private levelHeight: number;
 
-  private currentLookAheadX = 0;
-  private focusX = 0;
-  private focusY = 0;
+  private lookAheadX = 0;
+  private currentScrollX = 0;
+  private currentScrollY = 0;
 
-  constructor(scene: Phaser.Scene, levelWidth: number, levelHeight: number, initialX: number, initialY: number) {
+  constructor(
+    scene: Phaser.Scene,
+    levelWidth: number,
+    levelHeight: number,
+    initialX: number,
+    initialY: number
+  ) {
     this.scene = scene;
     this.camera = scene.cameras.main;
     this.levelWidth = levelWidth;
@@ -32,75 +41,88 @@ export class CameraController {
     this.snapTo(initialX, initialY);
   }
 
-  public snapTo(x: number, y: number): void {
-    const tuning = activePhysicsTuning;
-    this.focusX = x;
-    this.focusY = y;
+  public onViewportResized(targetX: number, targetY: number): void {
+    this.camera.setBounds(0, 0, this.levelWidth, this.levelHeight);
+    this.snapTo(targetX, targetY);
+  }
 
-    const targetScrollX = Phaser.Math.Clamp(
-      x - tuning.referenceWidth * tuning.cameraTargetScreenX,
-      0,
-      Math.max(0, this.levelWidth - tuning.referenceWidth)
-    );
-    const targetScrollY = Phaser.Math.Clamp(
-      y - tuning.referenceHeight * tuning.cameraTargetScreenY,
-      0,
-      Math.max(0, this.levelHeight - tuning.referenceHeight)
-    );
+  public snapTo(targetX: number, targetY: number): void {
+    const viewW = this.camera.width || activePhysicsTuning.referenceWidth;
+    const viewH = this.camera.height || activePhysicsTuning.referenceHeight;
+    const isPortrait = viewH > viewW;
 
-    this.camera.setScroll(targetScrollX, targetScrollY);
+    const anchorX = isPortrait ? 0.44 : activePhysicsTuning.cameraTargetScreenX;
+    const anchorY = isPortrait ? 0.54 : activePhysicsTuning.cameraTargetScreenY;
+
+    this.currentScrollX = Phaser.Math.Clamp(
+      targetX - viewW * anchorX,
+      0,
+      Math.max(0, this.levelWidth - viewW)
+    );
+    this.currentScrollY = Phaser.Math.Clamp(
+      targetY - viewH * anchorY,
+      0,
+      Math.max(0, this.levelHeight - viewH)
+    );
+    this.camera.setScroll(this.currentScrollX, this.currentScrollY);
   }
 
   public update(dt: number, player: Player): void {
     const tuning = activePhysicsTuning;
-    const px = player.sprite.x;
-    const py = player.sprite.y;
+    const viewW = this.camera.width || tuning.referenceWidth;
+    const viewH = this.camera.height || tuning.referenceHeight;
+    const isPortrait = viewH > viewW;
+
     const vx = player.body.velocity.x;
+    const vy = player.body.velocity.y;
+    const grounded = player.isGrounded();
 
-    // Smooth look-ahead offset when Nima is actively running
+    // Responsive look-ahead scaled appropriately for portrait vs landscape width
+    const maxLookAhead = isPortrait
+      ? Math.min(58, viewW * 0.145)
+      : tuning.cameraLookAheadX;
+
     let desiredLookAhead = 0;
-    if (Math.abs(vx) > 40) {
-      desiredLookAhead = Math.sign(vx) * tuning.cameraLookAheadX;
-    }
-    const lookLerp = 1 - Math.exp(-4.2 * dt);
-    this.currentLookAheadX = Phaser.Math.Linear(this.currentLookAheadX, desiredLookAhead, lookLerp);
-
-    // Apply horizontal & vertical deadzones around current focus point
-    const dx = px + this.currentLookAheadX - this.focusX;
-    if (Math.abs(dx) > tuning.cameraDeadzoneX) {
-      this.focusX += dx - Math.sign(dx) * tuning.cameraDeadzoneX;
+    if (Math.abs(vx) > 22) {
+      desiredLookAhead = Math.sign(vx) * maxLookAhead;
+    } else if (isPortrait) {
+      desiredLookAhead = player.facing * (maxLookAhead * 0.35);
     }
 
-    const dy = py - this.focusY;
-    const verticalDeadzone = player.wasGrounded ? tuning.cameraDeadzoneY * 0.5 : tuning.cameraDeadzoneY;
-    if (Math.abs(dy) > verticalDeadzone) {
-      this.focusY += dy - Math.sign(dy) * verticalDeadzone;
-    }
+    const lookLerp = 1 - Math.exp(-3.4 * dt);
+    this.lookAheadX = Phaser.Math.Linear(this.lookAheadX, desiredLookAhead, lookLerp);
 
-    // Compute desired camera scroll so Nima sits at ~42% from left, ~58% from top
-    // When facing left and moving left, shift screen anchor slightly toward 52% so route ahead to the left is visible
-    const screenAnchorX = player.facing > 0 ? tuning.cameraTargetScreenX : 1 - tuning.cameraTargetScreenX;
+    const anchorX = isPortrait ? 0.46 : tuning.cameraTargetScreenX;
+    const anchorY = isPortrait ? 0.54 : tuning.cameraTargetScreenY;
+
     const desiredScrollX = Phaser.Math.Clamp(
-      this.focusX - tuning.referenceWidth * screenAnchorX,
+      player.sprite.x + this.lookAheadX - viewW * anchorX,
       0,
-      Math.max(0, this.levelWidth - tuning.referenceWidth)
+      Math.max(0, this.levelWidth - viewW)
     );
 
+    const verticalBias = !grounded && vy > 120 ? 34 : !grounded && vy < -180 ? -18 : 0;
     const desiredScrollY = Phaser.Math.Clamp(
-      this.focusY - tuning.referenceHeight * tuning.cameraTargetScreenY,
+      player.sprite.y + verticalBias - viewH * anchorY,
       0,
-      Math.max(0, this.levelHeight - tuning.referenceHeight)
+      Math.max(0, this.levelHeight - viewH)
     );
 
-    const damping = 1 - Math.exp(-tuning.cameraLerpSpeed * dt);
-    const nextScrollX = Phaser.Math.Linear(this.camera.scrollX, desiredScrollX, damping);
-    const nextScrollY = Phaser.Math.Linear(this.camera.scrollY, desiredScrollY, damping);
+    const xLerp = 1 - Math.exp(-tuning.cameraLerpSpeed * dt);
+    const yLerpSpeed = grounded ? tuning.cameraLerpSpeed * 0.85 : tuning.cameraLerpSpeed * 1.1;
+    const yLerp = 1 - Math.exp(-yLerpSpeed * dt);
 
-    this.camera.setScroll(nextScrollX, nextScrollY);
+    this.currentScrollX = Phaser.Math.Linear(this.currentScrollX, desiredScrollX, xLerp);
+    this.currentScrollY = Phaser.Math.Linear(this.currentScrollY, desiredScrollY, yLerp);
+
+    this.camera.setScroll(this.currentScrollX, this.currentScrollY);
   }
 
-  public triggerSubtleShake(durationMs = 140, intensity = 0.0025): void {
-    if (!SaveManager.get().settings.screenShake) return;
+  public triggerSubtleShake(durationMs = 120, intensity = 0.002): void {
+    const settings = SaveManager.get().settings;
+    if (!settings.screenShake || settings.reducedParticles) {
+      return;
+    }
     this.camera.shake(durationMs, intensity);
   }
 }

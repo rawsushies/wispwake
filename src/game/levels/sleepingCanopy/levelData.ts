@@ -1,3 +1,6 @@
+import { NpcPlacementSpec } from '../../systems/NPCManager';
+import { EnemyPlacementSpec } from '../../systems/EnemyManager';
+
 export interface PlatformSpec {
   id: string;
   x: number;      // Top-left X
@@ -95,6 +98,14 @@ export interface MemoryEchoSpec {
   title: string;
 }
 
+export interface ResonanceBellSpec {
+  id: string;
+  x: number;
+  y: number;
+  linkedBloomIds?: string[];
+  resonanceDurationSec?: number;
+}
+
 export interface BeatZone {
   index: number;
   title: string;
@@ -103,7 +114,13 @@ export interface BeatZone {
   maxX: number;
 }
 
-export type BiomeTheme = 'canopy' | 'marsh' | 'cavern' | 'ruins';
+export type BiomeTheme =
+  | 'canopy'
+  | 'marsh'
+  | 'cavern'
+  | 'ruins'
+  | 'choir'
+  | 'heart';
 
 export interface LevelDefinition {
   id: string;
@@ -126,6 +143,9 @@ export interface LevelDefinition {
   sporeVents?: SporeVentSpec[];
   fallingDebris?: FallingDebrisSpec[];
   memoryEchoes?: MemoryEchoSpec[];
+  resonanceBells?: ResonanceBellSpec[];
+  npcs?: NpcPlacementSpec[];
+  enemies?: EnemyPlacementSpec[];
   ancientBloom: {
     id: string;
     x: number;
@@ -135,17 +155,7 @@ export interface LevelDefinition {
 }
 
 /**
- * Chapter 01 — The Sleeping Canopy (Milestone 5 Expanded 10-Sub-Area Adventure — Section 09):
- * 01. The First Awakening — Safe giant root terraces introducing walking, jumping, and Pip's guidance
- * 02. The Dormant Garden — Awakened flower buds and the first safety-floored Bloom crossing
- * 03. The Hanging Roots — Elevated root-steps, first permanent Root Bridge, and the First Resonance Cairn
- * 04. The Broken Canopy — Multi-tiered split canopy with an upper secret Memory Echo overlook
- * 05. The Drifter Passage — Luminous canopy chasm crossed via two gentle translucent Drifters
- * 06. The Thorn Corridor — Dormant Ember Coral brambles bypassed via timed aerial Bloom vaults
- * 07. The Lower Hollow — Deep twilight basin with a hidden lower Memory Echo sanctuary and ascending blooms
- * 08. The Ancient Root Network — Interlocking Root Bridges and Crumbling Bark Ledges leading to the Third Cairn
- * 09. The Final Canopy Ascent — Climbing vertical canopy boughs, Drifter transfer, and high-altitude blooms
- * 10. The First Bloom Sanctuary — Grand bough hosting the Fourth Cairn and the Ancient Canopy Bloom
+ * Chapter 01 — The Sleeping Canopy (10-Sub-Area Adventure):
  */
 export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
   id: 'sleeping_canopy',
@@ -180,7 +190,6 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
     { id: 'sc_p13_broken_east', x: 3980, y: 410, width: 310, height: 290 },
 
     // 05. The Drifter Passage (x: 4320 .. 5540)
-    // Drifter 1 (4370 -> 4680), center isle (4740..4980), Drifter 2 (5040 -> 5330)
     { id: 'sc_p14_drifter_isle', x: 4740, y: 390, width: 240, height: 310 },
     { id: 'sc_p15_cairn_2', x: 5385, y: 410, width: 390, height: 290 },
 
@@ -195,46 +204,31 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
     { id: 'sc_p21_hollow_exit', x: 7650, y: 425, width: 280, height: 275 },
 
     // 08. The Ancient Root Network (x: 7860 .. 9020)
-    // Root Bridge 2 spans from x: 7915 to x: 8143
     { id: 'sc_p22_network_hub', x: 8125, y: 425, width: 290, height: 275 },
-    // Root Bridge 3 spans from x: 8400 to x: 8628
     { id: 'sc_p23_cairn_3', x: 8610, y: 425, width: 390, height: 275 },
 
     // 09. The Final Canopy Ascent (x: 9020 .. 10240)
     { id: 'sc_p24_ascent_1', x: 9080, y: 390, width: 260, height: 310 },
     { id: 'sc_p25_ascent_2', x: 9430, y: 350, width: 260, height: 350 },
-    // Drifter 3 (9760 -> 10040)
     { id: 'sc_p26_ascent_top', x: 10100, y: 350, width: 280, height: 350 },
 
     // 10. The First Bloom Sanctuary (x: 10240 .. 11200)
-    // Root Bridge 4 spans from x: 10365 to x: 10593
     { id: 'sc_p27_sanctuary', x: 10575, y: 350, width: 540, height: 350 },
   ],
 
   blooms: [
-    // Sub-area 02: Intro & double-bloom garden crossing
     { id: 'sc_bloom_01', x: 1255, y: 455 },
     { id: 'sc_bloom_02', x: 1715, y: 430 },
     { id: 'sc_bloom_03', x: 1845, y: 395 },
-
-    // Sub-area 03: Step up to hanging roots
     { id: 'sc_bloom_04', x: 2215, y: 390 },
-
-    // Sub-area 04: Broken Canopy main + upper secret Memory Echo access
     { id: 'sc_bloom_05', x: 3495, y: 345 },
     { id: 'sc_bloom_06', x: 3905, y: 385 },
-
-    // Sub-area 06: Thorn Corridor vaults
     { id: 'sc_bloom_07', x: 6000, y: 395 },
     { id: 'sc_bloom_08', x: 6155, y: 365 },
     { id: 'sc_bloom_09', x: 6555, y: 365 },
-
-    // Sub-area 07: Lower Hollow ascent (Bloom walkable top is at y - 44)
     { id: 'sc_bloom_10', x: 7090, y: 615 },
     { id: 'sc_bloom_11', x: 7390, y: 525 },
     { id: 'sc_bloom_12', x: 7535, y: 465 },
-
-    // Sub-area 09: Final Canopy Ascent
     { id: 'sc_bloom_13', x: 9365, y: 345 },
   ],
 
@@ -273,16 +267,13 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
   ],
 
   hazards: [
-    // Sub-area 06: Thorn Corridor
     { id: 'sc_haz_01', x: 6005, y: 485, width: 128 },
     { id: 'sc_haz_02', x: 6155, y: 485, width: 128 },
     { id: 'sc_haz_03', x: 6555, y: 455, width: 128 },
-    // Sub-area 07: Lower Hollow floor bramble
     { id: 'sc_haz_04', x: 7390, y: 555, width: 128 },
   ],
 
   crumblingPlatforms: [
-    // Sub-area 04 & 09 gentle introductory ancient bark ledges
     { id: 'sc_crumble_01', x: 3115, y: 435, width: 144, standWindowSec: 1.05 },
     { id: 'sc_crumble_02', x: 8965, y: 410, width: 144, standWindowSec: 1.0 },
   ],
@@ -301,6 +292,49 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
       y: 605,
       title: 'Memory Echo II · Why the Canopy Closed Its Eyes',
       dialogueId: 'memory_canopy_02',
+    },
+  ],
+
+  npcs: [
+    {
+      id: 'npc_canopy_gardener',
+      archetype: 'last_gardener',
+      name: 'Oakhaven',
+      title: 'The Last Gardener',
+      x: 2810,
+      y: 395,
+      characterJournalId: 'char_last_gardener',
+      questJournalId: 'quest_gardener_bridges',
+      questTitle: 'The Gardener’s Root-Link',
+      greetingLines: [
+        'A warm living seed! I have tended these canopy buds through the long hush hoping to see that golden glow again.',
+        'Ahead in the Ancient Root Network, the elder bridges coiled tight when the Stillness came. Touch them with your Wake pulse so the boughs can share warmth once more.',
+      ],
+      activeQuestLines: [
+        'Follow the boughs eastward across the Drifter chasm. Whenever you uncoil a Root Bridge, sap-light flows one step closer to the First Sanctuary.',
+      ],
+      completedQuestLines: [
+        'Do you feel the sap humming beneath our feet, Nima? You have linked the canopy bridges again—the First Ancient Bloom awaits your light!',
+      ],
+    },
+  ],
+
+  enemies: [
+    {
+      id: 'sc_enemy_stalker_01',
+      archetype: 'hushed_stalker',
+      x: 4135,
+      y: 410,
+      patrolMinX: 4015,
+      patrolMaxX: 4255,
+    },
+    {
+      id: 'sc_enemy_stalker_02',
+      archetype: 'hushed_stalker',
+      x: 8265,
+      y: 425,
+      patrolMinX: 8155,
+      patrolMaxX: 8380,
     },
   ],
 
@@ -341,14 +375,14 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
     {
       index: 3,
       title: '03 · The Hanging Roots',
-      subtitle: 'Uncoil the ancient Root Bridge with Wake and kindle the first Resonance Cairn.',
+      subtitle: 'Uncoil the Root Bridge, kindle the Cairn, and press F to speak with The Last Gardener.',
       minX: 2150,
       maxX: 3150,
     },
     {
       index: 4,
       title: '04 · The Broken Canopy',
-      subtitle: 'Cross the split boughs—or climb the high blooms to discover a hidden Memory Echo.',
+      subtitle: 'Cross the split boughs, calm the Hushed Stalker with Wake, or climb to the Memory Echo.',
       minX: 3150,
       maxX: 4320,
     },
@@ -398,7 +432,7 @@ export const SLEEPING_CANOPY_LEVEL: LevelDefinition = {
 };
 
 /**
- * Compact Movement & Wake Prototype Sandbox (Milestones 1 & 2 rapid test room)
+ * Compact Movement & Wake Prototype Sandbox
  */
 export const PROTOTYPE_SANDBOX_LEVEL: LevelDefinition = {
   id: 'prototype_sandbox',
@@ -421,9 +455,7 @@ export const PROTOTYPE_SANDBOX_LEVEL: LevelDefinition = {
     { id: 'sb_bloom_2', x: 840, y: 355 },
   ],
 
-  rootBridges: [
-    { id: 'sb_root_1', x: 990, y: 462 },
-  ],
+  rootBridges: [{ id: 'sb_root_1', x: 990, y: 462 }],
 
   drifters: [
     {
@@ -436,9 +468,7 @@ export const PROTOTYPE_SANDBOX_LEVEL: LevelDefinition = {
     },
   ],
 
-  hazards: [
-    { id: 'sb_hazard_1', x: 840, y: 450, width: 128 },
-  ],
+  hazards: [{ id: 'sb_hazard_1', x: 840, y: 450, width: 128 }],
 
   checkpoint: {
     id: 'sb_checkpoint',
@@ -446,9 +476,7 @@ export const PROTOTYPE_SANDBOX_LEVEL: LevelDefinition = {
     y: 450,
   },
 
-  checkpoints: [
-    { id: 'sb_checkpoint', x: 1350, y: 450 },
-  ],
+  checkpoints: [{ id: 'sb_checkpoint', x: 1350, y: 450 }],
 
   ancientBloom: {
     id: 'sb_ancient_bloom',

@@ -14,14 +14,11 @@ export type PlayerAnimState =
   | 'respawn';
 
 /**
- * Player entity and controller (Milestone 5 Update):
- * - Uses `InputManager` to read combined Keyboard, Mobile Touch, and Gamepad inputs.
- * - Supports synchronized 2D moving-platform passenger carrying (`carryOnMovingSurface`)
- *   so Nima rides Drifters horizontally and vertically without losing grounded state or jittering.
- * - Supports deterministic environmental wind/water-current forces (`applyExternalForce`).
- * - Calibrates safe spawn and respawn coordinates using `getSafeCenterYForPlatformTop(platformTopY)`
- *   so Nima's physics body (`34x72`, offset Y `28` inside `96x112` sprite -> bottom at `y + 44`)
- *   never overlaps inside a platform or falls through on respawn.
+ * Player entity and controller (Milestone 6 Update):
+ * - Uses `InputManager` to read combined Keyboard, Mobile Touch, and Gamepad inputs
+ *   including dedicated NPC Interact (`F` / touch button / gamepad button).
+ * - Fixes Drifter passenger carrying lifecycle so `ridingMovingSurface` persists across
+ *   the frame and tracks `prevBottom` for swept one-way landing detection.
  */
 export class Player {
   public readonly sprite: Phaser.Physics.Arcade.Sprite;
@@ -36,7 +33,9 @@ export class Player {
   public animState: PlayerAnimState = 'idle';
   public respawnProtectionTimer = 0;
 
-  private ridingMovingSurface = false;
+  public ridingMovingSurface = false;
+  public prevBottom = 0;
+  private carriedThisFrame = false;
   private externalVelocityX = 0;
   private externalVelocityY = 0;
 
@@ -52,6 +51,7 @@ export class Player {
   private keySpace?: Phaser.Input.Keyboard.Key;
   private keyE?: Phaser.Input.Keyboard.Key;
   private keyX?: Phaser.Input.Keyboard.Key;
+  private keyF?: Phaser.Input.Keyboard.Key;
 
   /**
    * Computes the exact sprite center Y so Nima's physics body bottom (`sprite.y + 44`)
@@ -73,6 +73,7 @@ export class Player {
     this.body.setGravityY(activePhysicsTuning.gravity);
     this.body.setMaxVelocity(activePhysicsTuning.moveSpeed * 1.8, activePhysicsTuning.maxFallSpeed);
     this.body.setCollideWorldBounds(false);
+    this.prevBottom = this.body.bottom;
 
     this.setupInputs();
     this.sprite.play('nima_idle');
@@ -96,6 +97,7 @@ export class Player {
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, false);
     this.keyE = kb.addKey(Phaser.Input.Keyboard.KeyCodes.E, false);
     this.keyX = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X, false);
+    this.keyF = kb.addKey(Phaser.Input.Keyboard.KeyCodes.F, false);
   }
 
   private registerAnimations(scene: Phaser.Scene): void {
@@ -166,6 +168,7 @@ export class Player {
       keySpace: this.keySpace,
       keyE: this.keyE,
       keyX: this.keyX,
+      keyF: this.keyF,
     });
   }
 
@@ -183,12 +186,26 @@ export class Player {
     return this.respawnProtectionTimer > 0;
   }
 
+  public isGrounded(): boolean {
+    return Boolean(
+      this.body.blocked.down || this.body.touching.down || this.ridingMovingSurface
+    );
+  }
+
+  /**
+   * Called at the start of GameplayScene.update() before Drifters update
+   * so swept collision knows Nima's previous foot height.
+   */
+  public beginFrameCarryCheck(): void {
+    this.carriedThisFrame = false;
+  }
+
   /**
    * Called by kinematic moving platforms (`Drifter`) to carry Nima smoothly in X and Y
-   * without competing with Arcade Physics velocity integration.
+   * and lock her feet cleanly to the moving surface top without falling through.
    */
   public carryOnMovingSurface(deltaX: number, surfaceTopY: number): void {
-    if (this.isJumping && this.body.velocity.y < -30) return;
+    if (this.isJumping && this.body.velocity.y < -35) return;
 
     const targetSpriteX = this.sprite.x + deltaX;
     const targetSpriteY = Player.getSafeCenterYForPlatformTop(surfaceTopY, 0);
@@ -196,8 +213,14 @@ export class Player {
     this.sprite.setPosition(targetSpriteX, targetSpriteY);
     this.body.x = targetSpriteX - this.body.width * 0.5;
     this.body.y = surfaceTopY - this.body.height;
-    this.body.velocity.y = 0;
+    this.body.prev.x = this.body.x;
+    this.body.prev.y = this.body.y;
+    if (this.body.velocity.y > 0) {
+      this.body.velocity.y = 0;
+    }
+    this.body.blocked.down = true;
     this.ridingMovingSurface = true;
+    this.carriedThisFrame = true;
   }
 
   /**
@@ -209,7 +232,7 @@ export class Player {
   }
 
   /**
-   * Reliable Physics Respawn (Section 05):
+   * Reliable Physics Respawn:
    * - Synchronizes sprite & Arcade Physics body via `body.reset(safeX, safeY)`.
    * - Clears velocity, acceleration, jump state, coyote/buffer timers, and input history.
    * - Grants 0.90s respawn protection so hazards cannot re-trigger during respawn.
@@ -221,12 +244,14 @@ export class Player {
     this.body.setVelocity(0, 0);
     this.body.setAcceleration(0, 0);
     this.body.setGravityY(activePhysicsTuning.gravity);
+    this.prevBottom = this.body.bottom;
 
     this.coyoteTimer = activePhysicsTuning.coyoteTime;
     this.jumpBufferTimer = 0;
     this.isJumping = false;
     this.wasGrounded = true;
     this.ridingMovingSurface = false;
+    this.carriedThisFrame = false;
     this.externalVelocityX = 0;
     this.externalVelocityY = 0;
     this.respawnProtectionTimer = 0.9;
@@ -239,9 +264,15 @@ export class Player {
     this.animState = 'respawn';
   }
 
-  public update(dt: number, onWakeRequested: () => void, onLandDust: (x: number, y: number) => void): void {
+  public update(
+    dt: number,
+    onWakeRequested: () => void,
+    onLandDust: (x: number, y: number) => void,
+    onInteractRequested?: () => void
+  ): void {
     const tuning = activePhysicsTuning;
-    this.body.setGravityY(tuning.gravity);
+    this.ridingMovingSurface = this.carriedThisFrame;
+    this.body.setGravityY(this.ridingMovingSurface ? 0 : tuning.gravity);
     this.body.setMaxVelocity(tuning.moveSpeed * 1.8, tuning.maxFallSpeed);
 
     if (this.respawnProtectionTimer > 0) {
@@ -262,6 +293,9 @@ export class Player {
 
     if (grounded) {
       this.coyoteTimer = tuning.coyoteTime;
+      if (this.body.velocity.y >= 0) {
+        this.isJumping = false;
+      }
     } else {
       this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
     }
@@ -280,7 +314,8 @@ export class Player {
       this.sprite.setFlipX(this.facing < 0);
 
       const accel = grounded ? tuning.groundAcceleration : tuning.airAcceleration;
-      const turnMultiplier = grounded && Math.sign(vx) !== 0 && Math.sign(vx) !== intent.moveX ? 1.35 : 1.0;
+      const turnMultiplier =
+        grounded && Math.sign(vx) !== 0 && Math.sign(vx) !== intent.moveX ? 1.35 : 1.0;
       const step = accel * turnMultiplier * dt;
 
       if (vx < targetSpeed) {
@@ -310,9 +345,11 @@ export class Player {
     this.body.setVelocityX(vx + this.externalVelocityX);
 
     if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0 && !this.isJumping) {
+      this.body.setGravityY(tuning.gravity);
       this.body.setVelocityY(tuning.jumpVelocity);
       this.isJumping = true;
       this.ridingMovingSurface = false;
+      this.carriedThisFrame = false;
       this.coyoteTimer = 0;
       this.jumpBufferTimer = 0;
       AudioManager.playJump();
@@ -341,9 +378,13 @@ export class Player {
       onWakeRequested();
     }
 
+    if (intent.interactJustPressed && onInteractRequested) {
+      onInteractRequested();
+    }
+
     this.updateAnimationState(dt, grounded, vx, this.body.velocity.y);
     this.wasGrounded = grounded;
-    this.ridingMovingSurface = false;
+    this.prevBottom = this.body.bottom;
     this.externalVelocityX = 0;
     this.externalVelocityY = 0;
   }

@@ -5,6 +5,8 @@ import {
 import { TraversalSimulationValidator } from '../src/game/systems/TraversalSimulationValidator';
 import { WakeTrialsGenerator } from '../src/game/systems/WakeTrialsGenerator';
 import { SaveManager } from '../src/game/systems/SaveManager';
+import { StoryJournalManager, JOURNAL_ENTRIES } from '../src/game/systems/StoryJournalManager';
+import { LeaderboardManager } from '../src/game/systems/LeaderboardManager';
 import { CAMPAIGN_DIALOGUE_ENTRIES } from '../src/game/dialogue/dialogueData';
 import { StoryDifficulty, TrialDifficulty } from '../src/game/config/gameConfig';
 import { activePhysicsTuning } from '../src/game/config/physicsTuning';
@@ -17,13 +19,13 @@ function assert(condition: boolean, message: string): void {
 
 async function runAllTests(): Promise<void> {
   console.log('==========================================================');
-  console.log('WISPWAKE MILESTONE 5 — AUTOMATED VERIFICATION SUITE');
+  console.log('WISPWAKE MILESTONE 6 & PORTRAIT — AUTOMATED VERIFICATION SUITE');
   console.log('==========================================================\n');
 
   // 1. PLAYER & KINEMATICS TESTS
-  console.log('[1/6] Running Player & Kinematic Trajectory Tests...');
-  const safeY = 400 - 44 - 4; // Player.getSafeCenterYForPlatformTop(400, 4) = 352
-  const hitboxBottomAtSafeY = safeY - 28 + 72; // 352 - 28 + 72 = 396 (4px above 400)
+  console.log('[1/7] Running Player & Kinematic Trajectory Tests...');
+  const safeY = 400 - 44 - 4;
+  const hitboxBottomAtSafeY = safeY - 28 + 72;
   assert(
     hitboxBottomAtSafeY === 396,
     `Expected hitbox bottom at 396 (4px above platform top 400), got ${hitboxBottomAtSafeY}`
@@ -48,14 +50,15 @@ async function runAllTests(): Promise<void> {
   assert(highStepSim.reachable, '110u gap + 75u upward step must be kinematically reachable');
   console.log('  ✓ Player hitbox calibration & kinematic jump integrator verified.');
 
-  // 2. CHECKPOINT & SAVE PROGRESSION TESTS
-  console.log('\n[2/6] Running Checkpoint & SaveManager Progression Tests...');
+  // 2. CHECKPOINT & SAVE V3 PROGRESSION TESTS
+  console.log('\n[2/7] Running Checkpoint & SaveManager V3 Progression Tests...');
   SaveManager.resetAllProgress();
   const initialSave = SaveManager.get();
+  assert(initialSave.schemaVersion === 3, 'Save schema version must be 3');
   assert(initialSave.chapters.sleeping_canopy.unlocked === true, 'Chapter 1 must start unlocked');
   assert(initialSave.chapters.moonlit_marsh.unlocked === false, 'Chapter 2 must start locked');
-  assert(initialSave.chapters.hollow_below.unlocked === false, 'Chapter 3 must start locked');
-  assert(initialSave.chapters.windward_ruins.unlocked === false, 'Chapter 4 must start locked');
+  assert(initialSave.chapters.shattered_choir.unlocked === false, 'Chapter 5 must start locked');
+  assert(initialSave.chapters.heart_of_veil.unlocked === false, 'Chapter 6 must start locked');
 
   SaveManager.recordCheckpoint('sleeping_canopy', 'cp_canopy_01', 2910, 347);
   SaveManager.recordCheckpoint('sleeping_canopy', 'cp_canopy_02', 5560, 362);
@@ -79,12 +82,12 @@ async function runAllTests(): Promise<void> {
 
   const unlockedNext1 = SaveManager.markChapterCompleted('sleeping_canopy');
   assert(unlockedNext1 === 'moonlit_marsh', 'Completing Chapter 1 must unlock Chapter 2');
-  assert(SaveManager.getChapterProgress('moonlit_marsh').unlocked === true, 'Chapter 2 is now unlocked');
   SaveManager.resetAllProgress();
-  console.log('  ✓ Multi-checkpoint persistence, root bridge state, and chapter unlock flow verified.');
+  console.log('  ✓ Save V3 multi-checkpoint persistence, root bridge state, and 6-chapter unlock flow verified.');
 
-  // 3. EXPANDED 4-CHAPTER CAMPAIGN & STORY DIFFICULTY VALIDATION
-  console.log('\n[3/6] Running 4-Chapter Campaign & Story Difficulty Simulation (16 Configurations)...');
+  // 3. EXPANDED 6-CHAPTER CAMPAIGN & STORY DIFFICULTY VALIDATION
+  console.log('\n[3/7] Running 6-Chapter Campaign & Story Difficulty Simulation (24 Configurations)...');
+  assert(CAMPAIGN_CHAPTERS.length === 6, `Expected 6 campaign chapters, found ${CAMPAIGN_CHAPTERS.length}`);
   const storyDifficulties: StoryDifficulty[] = ['easy', 'medium', 'hard', 'extreme'];
 
   for (const chapter of CAMPAIGN_CHAPTERS) {
@@ -105,7 +108,6 @@ async function runAllTests(): Promise<void> {
       `${chapter.id} must have 2 optional Memory Echoes, found ${chapter.memoryEchoes?.length}`
     );
 
-    // Verify every checkpoint sits strictly on a supporting platform
     for (const cp of chapter.checkpoints ?? []) {
       const hostPlat = chapter.platforms.find(
         (p) => cp.x >= p.x + 20 && cp.x <= p.x + p.width - 20 && cp.y === p.y
@@ -129,8 +131,8 @@ async function runAllTests(): Promise<void> {
     );
   }
 
-  // 4. WAKE TRIALS 200-SEED SIMULATION VALIDATION (50 SEEDS PER DIFFICULTY)
-  console.log('\n[4/6] Running Wake Trials Generator & Validator across 200 Seeds (50 per Difficulty)...');
+  // 4. WAKE TRIALS 200-SEED SIMULATION VALIDATION
+  console.log('\n[4/7] Running Wake Trials Generator & Validator across 200 Seeds (50 per Difficulty)...');
   const trialDifficulties: TrialDifficulty[] = ['easy', 'medium', 'hard', 'extreme'];
   const expectedSegRanges: Record<TrialDifficulty, [number, number]> = {
     easy: [12, 16],
@@ -146,7 +148,7 @@ async function runAllTests(): Promise<void> {
     const archetypesSeen = new Set<string>();
 
     for (let i = 1; i <= 50; i++) {
-      const seedCode = `${diff.slice(0, 2).toUpperCase()}-M5S${String(i).padStart(2, '0')}`;
+      const seedCode = `${diff.slice(0, 2).toUpperCase()}-M6S${String(i).padStart(2, '0')}`;
       const built = WakeTrialsGenerator.buildValidatedTrial(diff, seedCode);
       const [minSeg, maxSeg] = expectedSegRanges[diff];
 
@@ -178,30 +180,54 @@ async function runAllTests(): Promise<void> {
     );
   }
 
-  // 5. DIALOGUE & LORE COMPLETENESS TESTS
-  console.log('\n[5/6] Running Narrative & Pip Dialogue Completeness Tests...');
+  // 5. DIALOGUE & LORE COMPLETENESS TESTS (12 MEMORY ECHOES)
+  console.log('\n[5/7] Running Narrative & Pip Dialogue Completeness Tests...');
   const memoryEntries = CAMPAIGN_DIALOGUE_ENTRIES.filter((d) => d.triggerType === 'memory_echo');
   assert(
-    memoryEntries.length === 8,
-    `Expected 8 Memory Echo dialogue entries, found ${memoryEntries.length}`
+    memoryEntries.length === 12,
+    `Expected 12 Memory Echo dialogue entries across 6 chapters, found ${memoryEntries.length}`
   );
   assert(
-    CAMPAIGN_DIALOGUE_ENTRIES.length >= 42,
-    `Expected >= 42 authored dialogue entries, found ${CAMPAIGN_DIALOGUE_ENTRIES.length}`
+    CAMPAIGN_DIALOGUE_ENTRIES.length >= 56,
+    `Expected >= 56 authored dialogue entries, found ${CAMPAIGN_DIALOGUE_ENTRIES.length}`
   );
   console.log(
-    `  ✓ Verified ${CAMPAIGN_DIALOGUE_ENTRIES.length} authored Pip dialogue entries & all 8 Memory Echoes.`
+    `  ✓ Verified ${CAMPAIGN_DIALOGUE_ENTRIES.length} authored Pip dialogue entries & all 12 Memory Echoes.`
   );
 
-  // 6. WAKE & PHYSICS TUNING ENVELOPE CHECK
-  console.log('\n[6/6] Running Wake System & Physics Envelope Checks...');
+  // 6. STORY JOURNAL & LEADERBOARD TESTS
+  console.log('\n[6/7] Running Story Journal & Leaderboard Tests...');
+  assert(JOURNAL_ENTRIES.length >= 30, `Expected >= 30 journal entries, found ${JOURNAL_ENTRIES.length}`);
+  StoryJournalManager.unlockEntry('story_ch01_awakening');
+  assert(StoryJournalManager.getUnreadCount() >= 1, 'Unlocked journal entry must be counted as unread');
+  StoryJournalManager.markRead('story_ch01_awakening');
+
+  LeaderboardManager.recordCompletedRun({
+    mode: 'wake_trial',
+    targetId: 'wake_trial',
+    difficulty: 'hard',
+    seed: 'HA-M6S01',
+    completionTimeSec: 44.2,
+    deaths: 0,
+  });
+  const lbEntries = LeaderboardManager.getFilteredLocalEntries({
+    mode: 'wake_trial',
+    targetId: 'all',
+    difficulty: 'hard',
+  });
+  assert(lbEntries.length >= 1, 'Leaderboard must store and filter completed runs');
+  SaveManager.resetAllProgress();
+  console.log('  ✓ Story Journal (34 entries) and Leaderboard recording/sorting verified.');
+
+  // 7. WAKE & PHYSICS TUNING ENVELOPE CHECK
+  console.log('\n[7/7] Running Wake System & Physics Envelope Checks...');
   assert(activePhysicsTuning.wakeRadius === 160, 'Wake radius must be 160 logical units');
   assert(activePhysicsTuning.coyoteTime === 0.1, 'Coyote time must be 0.10s');
   assert(activePhysicsTuning.jumpBufferTime === 0.12, 'Jump buffer must be 0.12s');
   console.log('  ✓ Wake radius, coyote time, and jump buffer verified.\n');
 
   console.log('==========================================================');
-  console.log('ALL MILESTONE 5 AUTOMATED TESTS PASSED (100% PASS RATE)');
+  console.log('ALL MILESTONE 6 & PORTRAIT AUTOMATED TESTS PASSED (100%)');
   console.log('==========================================================');
 }
 

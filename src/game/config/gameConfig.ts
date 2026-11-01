@@ -1,64 +1,90 @@
-export const GENERATED_ASSETS = {
-  bgCanopyFarSky: new URL('../../assets/images/bg_canopy_far_sky_1793515701725.jpg', import.meta.url).href,
-  envDistantCanopy: new URL('../../assets/images/env_distant_canopy_silhouettes_1793518606630.jpg', import.meta.url).href,
-  bgCanopyGiantRoots: new URL('../../assets/images/bg_canopy_giant_roots_1793515703954.jpg', import.meta.url).href,
-  envNearTwistedRoots: new URL('../../assets/images/env_near_twisted_roots_foliage_1793518606409.jpg', import.meta.url).href,
-  bgMoonlitMarsh: new URL('../../assets/images/bg_moonlit_marsh_plate_1793520808533.jpg', import.meta.url).href,
-  bgHollowBelow: new URL('../../assets/images/bg_hollow_below_plate_1793520810711.jpg', import.meta.url).href,
-  bgWindwardRuins: new URL('../../assets/images/bg_windward_ruins_plate_1793520811669.jpg', import.meta.url).href,
-  refNimaPipConcept: new URL('../../assets/images/ref_nima_pip_concept_1793515706089.jpg', import.meta.url).href,
-  refAncientBloomShrine: new URL('../../assets/images/ref_ancient_bloom_shrine_1793515704899.jpg', import.meta.url).href,
-  nimaSideMaster: new URL('../../assets/images/nima_side_gameplay_master_1793518602554.jpg', import.meta.url).href,
-  nimaRunContact: new URL('../../assets/images/nima_run_contact_pose_1793520804478.jpg', import.meta.url).href,
-  nimaRunPassing: new URL('../../assets/images/nima_run_passing_pose_1793520806672.jpg', import.meta.url).href,
-  pipMaster: new URL('../../assets/images/pip_gameplay_master_1793518604109.jpg', import.meta.url).href,
-} as const;
-
 export type CampaignChapterId =
   | 'sleeping_canopy'
   | 'moonlit_marsh'
   | 'hollow_below'
-  | 'windward_ruins';
+  | 'windward_ruins'
+  | 'shattered_choir'
+  | 'heart_of_veil';
 
 export type StoryDifficulty = 'easy' | 'medium' | 'hard' | 'extreme';
 export type TrialDifficulty = 'easy' | 'medium' | 'hard' | 'extreme';
+export type LightingQuality = 'auto' | 'high' | 'balanced' | 'low';
 
-export type LightingQuality = 'low' | 'balanced' | 'high' | 'auto';
+export const GENERATED_ASSETS = {
+  titleBackdrop: new URL('../../assets/images/wispwake_title_backdrop_1793515659880.jpg', import.meta.url).href,
+  bgCanopyFarSky: new URL('../../assets/images/bg_canopy_far_sky_plate_1793518595002.jpg', import.meta.url).href,
+  bgMoonlitMarsh: new URL('../../assets/images/bg_moonlit_marsh_plate_1793520806438.jpg', import.meta.url).href,
+  bgHollowBelow: new URL('../../assets/images/bg_hollow_below_plate_1793520806640.jpg', import.meta.url).href,
+  bgWindwardRuins: new URL('../../assets/images/bg_windward_ruins_plate_1793520807474.jpg', import.meta.url).href,
+  bgShatteredChoir: new URL('../../assets/images/bg_shattered_choir_plate_1793528889563.jpg', import.meta.url).href,
+  bgHeartOfVeil: new URL('../../assets/images/bg_heart_of_veil_plate_1793528890608.jpg', import.meta.url).href,
+  wispwakeWorldCreditsArt: new URL('../../assets/images/wispwake_world_credits_art_1793528891474.jpg', import.meta.url).href,
+  envDistantCanopy: new URL('../../assets/images/env_distant_canopy_silhouettes_1793515693040.jpg', import.meta.url).href,
+  bgCanopyGiantRoots: new URL('../../assets/images/bg_canopy_giant_roots_1793515656534.jpg', import.meta.url).href,
+  envNearTwistedRoots: new URL('../../assets/images/env_near_twisted_roots_1793518597776.jpg', import.meta.url).href,
+  nimaSideMaster: new URL('../../assets/images/nima_side_gameplay_master_1793518602554.jpg', import.meta.url).href,
+  nimaRunContact: new URL('../../assets/images/nima_run_contact_pose_1793520804478.jpg', import.meta.url).href,
+  nimaRunPassing: new URL('../../assets/images/nima_run_passing_pose_1793520806672.jpg', import.meta.url).href,
+  pipMaster: new URL('../../assets/images/pip_wisp_companion_master_1793518599941.jpg', import.meta.url).href,
+  refNimaPipConcept: new URL('../../assets/images/ref_nima_pip_concept_1793515706089.jpg', import.meta.url).href,
+  refWakeBloomBridge: new URL('../../assets/images/ref_wake_bloom_bridge_1793515705428.jpg', import.meta.url).href,
+  refDrifterCairn: new URL('../../assets/images/ref_drifter_cairn_1793515705434.jpg', import.meta.url).href,
+  refAncientBloomShrine: new URL('../../assets/images/ref_ancient_bloom_shrine_1793515706480.jpg', import.meta.url).href,
+} as const;
 
 export interface AccessibilitySettings {
-  musicVolume: number;       // 0.0 to 1.0
-  sfxVolume: number;         // 0.0 to 1.0
+  screenShake: boolean;
+  reducedParticles: boolean;
+  highContrastCues: boolean;
+  subtitlesEnabled: boolean;
+  lightingQuality: LightingQuality;
+  touchControlsMode: 'auto' | 'always' | 'off';
+  mouseDepthParallax: boolean;
+  musicVolume: number;
+  sfxVolume: number;
   muted: boolean;
-  screenShake: boolean;      // Disabled by default per Section 11.3
-  reducedParticles: boolean; // Reduced-effects mode per Section 10.3 & 11.3
-  highContrastCues: boolean; // Extra shape/outline cues on Wake targets
-  subtitlesEnabled: boolean; // Pip story & helper dialogue subtitles
-  lightingQuality: LightingQuality; // Hybrid 2D/2.5D lighting quality tier
-  touchControlsMode: 'auto' | 'always' | 'off'; // Mobile & tablet touch controls
-  debugHitboxes: boolean;    // Section 6.3 Debug mode (dev-only)
+  debugHitboxes: boolean;
 }
 
 export const DEFAULT_SETTINGS: AccessibilitySettings = {
-  musicVolume: 0.65,
-  sfxVolume: 0.80,
-  muted: false,
   screenShake: false,
   reducedParticles: false,
-  highContrastCues: true,
+  highContrastCues: false,
   subtitlesEnabled: true,
   lightingQuality: 'auto',
   touchControlsMode: 'auto',
+  mouseDepthParallax: true,
+  musicVolume: 0.7,
+  sfxVolume: 0.85,
+  muted: false,
   debugHitboxes: false,
 };
 
 export interface ActiveDialogueBubble {
   id: string;
-  speaker: 'Pip';
+  speaker: string;
   text: string;
   worldX: number;
   worldY: number;
   screenX: number;
   screenY: number;
+}
+
+export interface NearbyNpcPrompt {
+  id: string;
+  name: string;
+  title: string;
+}
+
+export interface ActiveNpcDialogueState {
+  id: string;
+  speakerName: string;
+  speakerTitle: string;
+  line: string;
+  lineIndex: number;
+  totalLines: number;
+  questTitle?: string;
+  questStatus?: 'available' | 'active' | 'completed';
 }
 
 export interface TelemetrySnapshot {
@@ -85,6 +111,10 @@ export interface TelemetrySnapshot {
   totalMemoriesCount: number;
   chapterCompleted: boolean;
   activeDialogue: ActiveDialogueBubble | null;
+  nearbyNpcPrompt: NearbyNpcPrompt | null;
+  activeNpcDialogue: ActiveNpcDialogueState | null;
+  unreadJournalCount: number;
+  chapterDeaths: number;
   storyDifficulty: StoryDifficulty;
   trialElapsedSec: number;
   trialSeed: string | null;

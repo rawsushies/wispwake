@@ -2,15 +2,17 @@ import Phaser from 'phaser';
 import { BiomeTheme, PlatformSpec } from '../levels/sleepingCanopy/levelData';
 
 /**
- * TerrainVisualAssembler — Milestone 3 & 4 Multi-Biome Organic Terrain & Platform Redesign.
+ * TerrainVisualAssembler — Milestone 3, 4 & 6 Multi-Biome Organic Terrain & Platform Redesign.
  *
  * Replaces uniform geometric rectangle platforms with multi-layered, hand-painted organic
- * Veilgrove formations tailored to each chapter's biome (`canopy`, `marsh`, `cavern`, `ruins`)
+ * Veilgrove formations tailored to each chapter's biome (`canopy`, `marsh`, `cavern`, `ruins`, `choir`, `heart`)
  * while keeping the physics collision box 100% separate and readable:
  * 1. Ancient Root Formations (`canopy`): Knotted bark strata, uneven moss-draped top ridges, hanging root tendrils.
  * 2. Moonlit Marsh Terraces (`marsh`): Sunken stone arches, wet reflective slate, glowing cattail reeds, and water-lily pads.
  * 3. Hollow Below Caverns (`cavern`): Giant subterranean root ribs, bioluminescent purple/mint shelf fungi, and hanging root stalactites.
  * 4. Windward Ruins (`ruins`): Weathered sky-temple stone blocks, carved relief arches, golden sun-lichen, and wind-swept grasses.
+ * 5. Shattered Choir (`choir`): Fluted acoustic resonance stone, silver-lilac lichen, and harmonic crystal veins.
+ * 6. Heart of the Veil (`heart`): Ancient heartwood roots, golden sap veins, and luminous emerald sanctuary moss.
  */
 export class TerrainVisualAssembler {
   public static createOrganicPlatformVisual(
@@ -69,10 +71,12 @@ export class TerrainVisualAssembler {
       const curve = (rand(i + 40) - 0.5) * 26;
 
       ctx.strokeStyle =
-        biome === 'cavern'
+        biome === 'cavern' || biome === 'choir'
           ? '#231D3A'
           : biome === 'ruins'
           ? '#2D3A4A'
+          : biome === 'heart'
+          ? '#2E261E'
           : i % 2 === 0
           ? '#19283A'
           : '#243B3E';
@@ -92,11 +96,12 @@ export class TerrainVisualAssembler {
       }
 
       if (restored || rand(i + 80) > 0.55) {
-        ctx.fillStyle = restored
-          ? 'rgba(241, 200, 120, 0.8)'
-          : biome === 'cavern'
-          ? 'rgba(183, 162, 232, 0.72)'
-          : 'rgba(143, 231, 199, 0.6)';
+        ctx.fillStyle =
+          restored || biome === 'heart'
+            ? 'rgba(241, 200, 120, 0.8)'
+            : biome === 'cavern' || biome === 'choir'
+            ? 'rgba(183, 162, 232, 0.72)'
+            : 'rgba(143, 231, 199, 0.6)';
         ctx.beginPath();
         ctx.arc(rx - curve * 0.4, startY + hangLen, 2.5, 0, Math.PI * 2);
         ctx.fill();
@@ -146,6 +151,14 @@ export class TerrainVisualAssembler {
       bodyGrad.addColorStop(0, '#445566');
       bodyGrad.addColorStop(0.5, '#2B3A4D');
       bodyGrad.addColorStop(1, '#172233');
+    } else if (biome === 'choir') {
+      bodyGrad.addColorStop(0, '#3A3E64');
+      bodyGrad.addColorStop(0.5, '#25294A');
+      bodyGrad.addColorStop(1, '#14172E');
+    } else if (biome === 'heart') {
+      bodyGrad.addColorStop(0, '#3D4838');
+      bodyGrad.addColorStop(0.5, '#28312A');
+      bodyGrad.addColorStop(1, '#151C1E');
     } else if (style === 'stone_root') {
       bodyGrad.addColorStop(0, '#334C54');
       bodyGrad.addColorStop(0.45, '#1F3142');
@@ -160,7 +173,7 @@ export class TerrainVisualAssembler {
 
     ctx.clip();
 
-    if (style === 'stone_root' || biome === 'ruins') {
+    if (style === 'stone_root' || biome === 'ruins' || biome === 'choir') {
       ctx.strokeStyle = '#121B2B';
       ctx.lineWidth = 2.5;
       for (let y = oy + 26; y < oy + h - 12; y += 32) {
@@ -171,7 +184,7 @@ export class TerrainVisualAssembler {
         }
         ctx.stroke();
       }
-      ctx.strokeStyle = biome === 'ruins' ? '#586A78' : '#253D3B';
+      ctx.strokeStyle = biome === 'choir' ? '#6D72A8' : biome === 'ruins' ? '#586A78' : '#253D3B';
       ctx.lineWidth = 10;
       for (let i = 0; i < 3; i++) {
         const rx = ox + w * (0.2 + i * 0.3);
@@ -187,6 +200,8 @@ export class TerrainVisualAssembler {
           r % 2 === 0
             ? biome === 'cavern'
               ? 'rgba(92, 74, 138, 0.45)'
+              : biome === 'heart'
+              ? 'rgba(218, 172, 94, 0.38)'
               : 'rgba(56, 88, 78, 0.55)'
             : 'rgba(18, 27, 43, 0.65)';
         ctx.lineWidth = 6 + (r % 3) * 3;
@@ -210,7 +225,12 @@ export class TerrainVisualAssembler {
     for (const side of [-1, 1]) {
       const mx = side < 0 ? ox + 6 : ox + w - 6;
       const my = oy + 28 + rand(side + 50) * Math.min(45, h * 0.4);
-      ctx.fillStyle = restored ? '#F1C878' : biome === 'cavern' ? '#B7A2E8' : '#8FE7C7';
+      ctx.fillStyle =
+        restored || biome === 'heart'
+          ? '#F1C878'
+          : biome === 'cavern' || biome === 'choir'
+          ? '#B7A2E8'
+          : '#8FE7C7';
       ctx.strokeStyle = '#121B2B';
       ctx.lineWidth = 1.4;
       ctx.beginPath();
@@ -230,7 +250,12 @@ export class TerrainVisualAssembler {
       const tx = ox + 18 + t * ((w - 36) / tuftCount) + (rand(t + 200) - 0.5) * 12;
       const ty = oy + 2;
 
-      ctx.strokeStyle = restored ? '#98B87A' : biome === 'cavern' ? '#70889E' : '#78906A';
+      ctx.strokeStyle =
+        restored || biome === 'heart'
+          ? '#98B87A'
+          : biome === 'cavern' || biome === 'choir'
+          ? '#70889E'
+          : '#78906A';
       ctx.lineWidth = 2;
       for (let b = -1; b <= 1; b++) {
         ctx.beginPath();
@@ -240,7 +265,12 @@ export class TerrainVisualAssembler {
       }
 
       if (t % 3 === 0) {
-        ctx.fillStyle = restored ? '#F1C878' : biome === 'cavern' ? '#B7A2E8' : '#8FE7C7';
+        ctx.fillStyle =
+          restored || biome === 'heart'
+            ? '#F1C878'
+            : biome === 'cavern' || biome === 'choir'
+            ? '#B7A2E8'
+            : '#8FE7C7';
         ctx.beginPath();
         ctx.arc(tx, ty - 11, 2.2, 0, Math.PI * 2);
         ctx.fill();
@@ -248,7 +278,7 @@ export class TerrainVisualAssembler {
     }
 
     const mossGrad = ctx.createLinearGradient(0, oy - 3, 0, oy + 26);
-    if (restored) {
+    if (restored || biome === 'heart') {
       mossGrad.addColorStop(0, '#B4CF8E');
       mossGrad.addColorStop(0.5, '#78906A');
       mossGrad.addColorStop(1, '#4A6B53');
@@ -260,6 +290,10 @@ export class TerrainVisualAssembler {
       mossGrad.addColorStop(0, '#7B74B8');
       mossGrad.addColorStop(0.55, '#4A487A');
       mossGrad.addColorStop(1, '#29284D');
+    } else if (biome === 'choir') {
+      mossGrad.addColorStop(0, '#96A6D6');
+      mossGrad.addColorStop(0.55, '#5C6C9E');
+      mossGrad.addColorStop(1, '#323D64');
     } else if (biome === 'ruins') {
       mossGrad.addColorStop(0, '#B5B884');
       mossGrad.addColorStop(0.55, '#6D7E62');
@@ -294,7 +328,8 @@ export class TerrainVisualAssembler {
     ctx.stroke();
 
     // 5. Walkable Top Rim Light (Ensures instant platform readability in every lighting state per Section 9.6)
-    ctx.strokeStyle = restored ? 'rgba(241, 200, 120, 0.88)' : 'rgba(182, 212, 200, 0.82)';
+    ctx.strokeStyle =
+      restored || biome === 'heart' ? 'rgba(241, 200, 120, 0.88)' : 'rgba(182, 212, 200, 0.82)';
     ctx.lineWidth = 2.3;
     ctx.beginPath();
     ctx.moveTo(ox + 10, oy + 1.5);

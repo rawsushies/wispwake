@@ -61,16 +61,7 @@ interface FogBand {
 }
 
 /**
- * LivingEnvironmentSystem — Milestone 3 & 4 (Sections 04, 06, 07, 08, and 10).
- *
- * Orchestrates the 6 distinct visual parallax layers of the Veilgrove across all 4 campaign biomes
- * (`canopy`, `marsh`, `cavern`, `ruins`) plus rich Upper Canopy & Upper Midground vertical bands
- * so the upper screen space above Nima and Pip feels like a living forest ecosystem:
- * - Band 1 (Upper Canopy): Overhanging tree branches, suspended blossom garlands, canopy openings, drifting petals.
- * - Band 2 (Upper Midground): Hanging moss vines, root curtains, perched/gliding canopy birds, hovering wisps.
- * - Band 3 (Player-Height Framing): Twisted root arches, hollow trunks, stone ruins framing behind Nima.
- * - Band 4 (Lower Terrain): Organic platforms, reactive ferns, veil-bells, and marsh/cavern mist.
- * - Band 5 (Foreground): Subtle left/right and top framing botanical silhouettes that never obscure gameplay.
+ * LivingEnvironmentSystem — Milestone 3, 4 & 6 (6-Biome Parallax + Portrait/Landscape Responsive Backdrops + Mouse 2.5D Depth).
  */
 export class LivingEnvironmentSystem {
   private readonly scene: Phaser.Scene;
@@ -84,7 +75,8 @@ export class LivingEnvironmentSystem {
   private nearRootsPlates: Phaser.GameObjects.Image[] = [];
   private upperCanopyBoughs: CanopyBough[] = [];
   private lightRays: Phaser.GameObjects.Image[] = [];
-  private foregroundBotanicals: Phaser.GameObjects.Image[] = [];
+  private foregroundBotanicals: Array<{ sprite: Phaser.GameObjects.Image; baseX: number; baseY: number }> = [];
+  private separationHaze!: Phaser.GameObjects.Rectangle;
   private restorationWash!: Phaser.GameObjects.Rectangle;
 
   private birds: BirdEntity[] = [];
@@ -240,13 +232,12 @@ export class LivingEnvironmentSystem {
       }
     }
 
-    // 4. Upper Canopy Overhanging Branch & Blossom Bough (340x165, Section 06 Upper Canopy Band)
+    // 4. Upper Canopy Overhanging Branch & Blossom Bough (340x165)
     if (!s.textures.exists('env_upper_canopy_bough')) {
       const tex = s.textures.createCanvas('env_upper_canopy_bough', 340, 165);
       if (tex) {
         const ctx = tex.getContext();
 
-        // Main gnarled overarching canopy limb
         ctx.strokeStyle = '#19293B';
         ctx.lineWidth = 18;
         ctx.lineCap = 'round';
@@ -255,7 +246,6 @@ export class LivingEnvironmentSystem {
         ctx.quadraticCurveTo(145, 58, 315, 24);
         ctx.stroke();
 
-        // Secondary hanging branchlets
         ctx.strokeStyle = '#243C42';
         ctx.lineWidth = 7;
         for (const bx of [68, 155, 245]) {
@@ -265,7 +255,6 @@ export class LivingEnvironmentSystem {
           ctx.stroke();
         }
 
-        // Layered painted leaf clusters & hanging blossom bells in the upper viewport
         const leafClusters = [
           { x: 55, y: 42, r: 34, c: '#233F42' },
           { x: 115, y: 54, r: 40, c: '#2E524E' },
@@ -282,7 +271,6 @@ export class LivingEnvironmentSystem {
           ctx.fill();
         }
 
-        // Bioluminescent upper canopy blossoms
         for (const fl of [
           { x: 64, y: 112, c: '#8FE7C7' },
           { x: 148, y: 120, c: '#F1C878' },
@@ -401,11 +389,19 @@ export class LivingEnvironmentSystem {
     if (this.biome === 'ruins' && this.scene.textures.exists('bg_windward_ruins')) {
       return 'bg_windward_ruins';
     }
+    if (this.biome === 'choir' && this.scene.textures.exists('bg_shattered_choir')) {
+      return 'bg_shattered_choir';
+    }
+    if (this.biome === 'heart' && this.scene.textures.exists('bg_heart_of_veil')) {
+      return 'bg_heart_of_veil';
+    }
     return 'bg_canopy_far_sky';
   }
 
   private assembleSixLayerEnvironment(platforms: PlatformSpec[], initiallyRestored: boolean): void {
     const s = this.scene;
+    const viewW = s.scale.width || 960;
+    const viewH = s.scale.height || 540;
 
     // =========================================================================
     // LAYER 1 — FAR SKY / BIOME MASTER BACKDROP (Depth 1, Parallax 0.05x)
@@ -415,8 +411,13 @@ export class LivingEnvironmentSystem {
       const texImg = s.textures.get(farKey).getSourceImage() as HTMLImageElement;
       const tw = texImg?.width || 1920;
       const th = texImg?.height || 1080;
-      this.farSkyLayer = s.add.tileSprite(0, 0, tw, th, farKey);
-      this.farSkyLayer.setOrigin(0, 0).setScrollFactor(0).setScale(960 / tw, 540 / th).setDepth(1);
+      this.farSkyLayer = s.add.tileSprite(-24, -24, tw, th, farKey);
+      const coverScale = Math.max((viewW + 48) / tw, (viewH + 48) / th);
+      this.farSkyLayer
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setScale(coverScale, coverScale)
+        .setDepth(1);
       this.farSkyLayer.setTint(initiallyRestored ? 0xffe8c2 : 0xd0e2f2);
     }
 
@@ -424,17 +425,18 @@ export class LivingEnvironmentSystem {
     // LAYER 2 — DISTANT ENVIRONMENT & FLOCKS OF BIRDS (Depth 2..3, Parallax 0.14x)
     // =========================================================================
     if (s.textures.exists('env_distant_canopy')) {
-      this.distantCanopyLayer = s.add.tileSprite(0, 0, 1920, 1080, 'env_distant_canopy');
+      this.distantCanopyLayer = s.add.tileSprite(-24, -24, 1920, 1080, 'env_distant_canopy');
+      const coverScale = Math.max((viewW + 48) / 1920, (viewH + 48) / 1080);
       this.distantCanopyLayer
         .setOrigin(0, 0)
         .setScrollFactor(0)
-        .setScale(960 / 1920, 540 / 1080)
+        .setScale(coverScale, coverScale)
         .setDepth(2)
-        .setAlpha(this.biome === 'canopy' ? 0.52 : 0.28)
+        .setAlpha(this.biome === 'canopy' || this.biome === 'heart' ? 0.52 : 0.28)
         .setTint(
-          initiallyRestored
+          initiallyRestored || this.biome === 'heart'
             ? 0xffe4b8
-            : this.biome === 'cavern'
+            : this.biome === 'cavern' || this.biome === 'choir'
             ? 0x695d94
             : this.biome === 'marsh'
             ? 0x64969e
@@ -442,7 +444,6 @@ export class LivingEnvironmentSystem {
         );
     }
 
-    // Spawn flocks of distant birds / cavern moths flying across the upper screen band (y: 55..195)
     const flockCenters = [320, 980, 1680, 2450, 3250, 3850];
     flockCenters.forEach((fx, flockIdx) => {
       const birdCount = 3 + (flockIdx % 2);
@@ -472,17 +473,18 @@ export class LivingEnvironmentSystem {
     // LAYER 3 — MIDGROUND FOREST (Depth 4, Parallax 0.26x)
     // =========================================================================
     if (s.textures.exists('bg_canopy_giant_roots')) {
-      this.midgroundForestLayer = s.add.tileSprite(0, 0, 1920, 1080, 'bg_canopy_giant_roots');
+      this.midgroundForestLayer = s.add.tileSprite(-24, -24, 1920, 1080, 'bg_canopy_giant_roots');
+      const coverScale = Math.max((viewW + 48) / 1920, (viewH + 48) / 1080);
       this.midgroundForestLayer
         .setOrigin(0, 0)
         .setScrollFactor(0)
-        .setScale(960 / 1920, 540 / 1080)
+        .setScale(coverScale, coverScale)
         .setDepth(4)
-        .setAlpha(this.biome === 'canopy' ? 0.68 : 0.36)
+        .setAlpha(this.biome === 'canopy' || this.biome === 'heart' ? 0.68 : 0.36)
         .setTint(
-          initiallyRestored
+          initiallyRestored || this.biome === 'heart'
             ? 0xfff0d4
-            : this.biome === 'cavern'
+            : this.biome === 'cavern' || this.biome === 'choir'
             ? 0x7668a6
             : this.biome === 'marsh'
             ? 0x6ea4a8
@@ -503,12 +505,11 @@ export class LivingEnvironmentSystem {
         plate.setFlipX(idx % 2 === 1);
         plate.setDepth(6);
         plate.setAlpha(0.76);
-        plate.setTint(initiallyRestored ? 0xffecc4 : 0x8db0a8);
+        plate.setTint(initiallyRestored || this.biome === 'heart' ? 0xffecc4 : 0x8db0a8);
         this.nearRootsPlates.push(plate);
       });
     }
 
-    // Band 1 & 2 (Section 06): Upper Canopy Overhanging Branches & Blossom Boughs populating y: 0..170
     for (let bx = 80; bx < this.levelWidth - 100; bx += 380) {
       const bough = s.add.image(bx, -14 + ((bx % 3) * 8), 'env_upper_canopy_bough');
       bough.setOrigin(0.5, 0);
@@ -517,8 +518,9 @@ export class LivingEnvironmentSystem {
       bough.setScale(0.9 + ((bx % 4) * 0.1));
       bough.setFlipX((bx / 380) % 2 === 1);
       bough.setAlpha(0.88);
-      if (this.biome === 'cavern') bough.setTint(0x9a8cd8);
+      if (this.biome === 'cavern' || this.biome === 'choir') bough.setTint(0x9a8cd8);
       if (this.biome === 'ruins') bough.setTint(0xc8d4b8);
+      if (this.biome === 'heart') bough.setTint(0xffe4b5);
       this.upperCanopyBoughs.push({
         sprite: bough,
         x: bx,
@@ -529,7 +531,6 @@ export class LivingEnvironmentSystem {
       });
     }
 
-    // Band 2: Hanging canopy moss vines & root curtains across upper and mid vertical bands
     for (let vx = 160; vx < this.levelWidth - 120; vx += 240) {
       const vine = s.add.image(vx, -10 + ((vx % 3) * 18), 'env_hanging_vine');
       vine.setOrigin(0.5, 0);
@@ -547,7 +548,6 @@ export class LivingEnvironmentSystem {
       });
     }
 
-    // Hovering bioluminescent canopy Wisps across both upper and mid vertical bands (y: 80..360)
     for (let wx = 260; wx < this.levelWidth - 160; wx += 320) {
       const wy = 95 + ((wx * 19) % 245);
       const wisp = s.add.image(wx, wy, 'vfx_spore');
@@ -568,14 +568,14 @@ export class LivingEnvironmentSystem {
     }
 
     // Atmospheric Separation Haze between background layers and gameplay collision plane
-    s.add
-      .rectangle(0, 0, 960, 540, VEILGROVE_HEX.nightInk, 0.22)
+    this.separationHaze = s.add
+      .rectangle(0, 0, viewW + 64, viewH + 64, VEILGROVE_HEX.nightInk, 0.22)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(9.5);
 
     this.restorationWash = s.add
-      .rectangle(0, 0, 960, 540, VEILGROVE_HEX.sapGold, initiallyRestored ? 0.16 : 0)
+      .rectangle(0, 0, viewW + 64, viewH + 64, VEILGROVE_HEX.sapGold, initiallyRestored ? 0.16 : 0)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setBlendMode(Phaser.BlendModes.ADD)
@@ -622,7 +622,7 @@ export class LivingEnvironmentSystem {
       fg.setScrollFactor(1.18, 1.0);
       fg.setAlpha(0.85);
       fg.setFlipX((fx / 440) % 2 === 1);
-      this.foregroundBotanicals.push(fg);
+      this.foregroundBotanicals.push({ sprite: fg, baseX: fx, baseY: -18 });
     }
 
     // =========================================================================
@@ -652,7 +652,6 @@ export class LivingEnvironmentSystem {
       });
     }
 
-    // Multi-depth drifting spores, petals & fireflies across upper, mid, and lower vertical bands
     const sporeCount = 46;
     for (let i = 0; i < sporeCount; i++) {
       const sx = (i / sporeCount) * this.levelWidth + Math.random() * 80;
@@ -671,6 +670,35 @@ export class LivingEnvironmentSystem {
         phase: Math.random() * Math.PI * 2,
         depthFactor: isForeground ? 1.2 : 1.0,
       });
+    }
+  }
+
+  /**
+   * Dynamically rescales screen-space backdrop layers when switching between portrait and landscape
+   * so there is never an unrendered gap or stretched distortion.
+   */
+  public handleViewportResize(viewW: number, viewH: number): void {
+    const farKey = this.getFarSkyTextureKey();
+    if (this.farSkyLayer && this.scene.textures.exists(farKey)) {
+      const texImg = this.scene.textures.get(farKey).getSourceImage() as HTMLImageElement;
+      const tw = texImg?.width || 1920;
+      const th = texImg?.height || 1080;
+      const coverScale = Math.max((viewW + 48) / tw, (viewH + 48) / th);
+      this.farSkyLayer.setScale(coverScale, coverScale);
+    }
+
+    const stdCover = Math.max((viewW + 48) / 1920, (viewH + 48) / 1080);
+    if (this.distantCanopyLayer) {
+      this.distantCanopyLayer.setScale(stdCover, stdCover);
+    }
+    if (this.midgroundForestLayer) {
+      this.midgroundForestLayer.setScale(stdCover, stdCover);
+    }
+    if (this.separationHaze) {
+      this.separationHaze.setSize(viewW + 64, viewH + 64);
+    }
+    if (this.restorationWash) {
+      this.restorationWash.setSize(viewW + 64, viewH + 64);
     }
   }
 
@@ -764,17 +792,33 @@ export class LivingEnvironmentSystem {
     }
   }
 
-  public update(dt: number, cameraScrollX: number, playerX: number, playerY: number, playerVx: number): void {
+  public update(
+    dt: number,
+    cameraScrollX: number,
+    playerX: number,
+    playerY: number,
+    playerVx: number,
+    pointerNormX = 0,
+    pointerNormY = 0
+  ): void {
     const reduced = SaveManager.get().settings.reducedParticles;
 
     if (this.farSkyLayer) {
-      this.farSkyLayer.tilePositionX = cameraScrollX * 0.05;
+      this.farSkyLayer.tilePositionX = cameraScrollX * 0.05 + pointerNormX * 4;
+      this.farSkyLayer.y = -24 + pointerNormY * 3;
     }
     if (this.distantCanopyLayer) {
-      this.distantCanopyLayer.tilePositionX = cameraScrollX * 0.14;
+      this.distantCanopyLayer.tilePositionX = cameraScrollX * 0.14 + pointerNormX * 9;
+      this.distantCanopyLayer.y = -24 + pointerNormY * 6;
     }
     if (this.midgroundForestLayer) {
-      this.midgroundForestLayer.tilePositionX = cameraScrollX * 0.26;
+      this.midgroundForestLayer.tilePositionX = cameraScrollX * 0.26 + pointerNormX * 15;
+      this.midgroundForestLayer.y = -24 + pointerNormY * 9;
+    }
+
+    for (const fg of this.foregroundBotanicals) {
+      fg.sprite.x = fg.baseX - pointerNormX * 18;
+      fg.sprite.y = fg.baseY - pointerNormY * 9;
     }
 
     for (const bird of this.birds) {
@@ -842,8 +886,9 @@ export class LivingEnvironmentSystem {
       if (bough.wakeExciteTimer > 0) {
         bough.wakeExciteTimer -= dt;
         if (bough.wakeExciteTimer <= 0) {
-          if (this.biome === 'cavern') bough.sprite.setTint(0x9a8cd8);
+          if (this.biome === 'cavern' || this.biome === 'choir') bough.sprite.setTint(0x9a8cd8);
           else if (this.biome === 'ruins') bough.sprite.setTint(0xc8d4b8);
+          else if (this.biome === 'heart') bough.sprite.setTint(0xffe4b5);
           else bough.sprite.clearTint();
         }
       }

@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import {
   ActiveDialogueBubble,
+  ActiveNpcDialogueState,
   CampaignChapterId,
   GENERATED_ASSETS,
+  NearbyNpcPrompt,
   StoryDifficulty,
   TelemetrySnapshot,
   TrialDifficulty,
@@ -21,6 +23,11 @@ import {
 } from '../systems/LevelRegistry';
 import { WakeTrialsGenerator } from '../systems/WakeTrialsGenerator';
 import { EnvironmentalHazardSystem } from '../systems/EnvironmentalHazardSystem';
+import { NPCManager } from '../systems/NPCManager';
+import { EnemyManager } from '../systems/EnemyManager';
+import { PointerDepthParallaxSystem } from '../systems/PointerDepthParallaxSystem';
+import { StoryJournalManager } from '../systems/StoryJournalManager';
+import { LeaderboardManager } from '../systems/LeaderboardManager';
 import { InputManager } from '../systems/InputManager';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
@@ -53,10 +60,12 @@ export class GameplayScene extends Phaser.Scene {
   private isTitleAttractMode = true;
   private attractElapsed = 0;
 
-  // Wake Trials State
+  // Wake Trials & Run Metrics State
   private trialDifficulty: TrialDifficulty = 'medium';
   private trialSeed = 'ME-48219';
   private trialElapsedSec = 0;
+  private chapterElapsedSec = 0;
+  private chapterDeaths = 0;
 
   // Core Entities & Systems
   private player!: Player;
@@ -65,9 +74,14 @@ export class GameplayScene extends Phaser.Scene {
   private cameraController!: CameraController;
   private environmentSystem!: LivingEnvironmentSystem;
   private envHazardSystem!: EnvironmentalHazardSystem;
+  private npcManager!: NPCManager;
+  private enemyManager!: EnemyManager;
+  private pointerParallax!: PointerDepthParallaxSystem;
   private lightingSystem!: LightingSystem;
   private dialogueManager!: DialogueManager;
   private latestDialogueBubble: ActiveDialogueBubble | null = null;
+  private latestNpcPrompt: NearbyNpcPrompt | null = null;
+  private latestNpcDialogue: ActiveNpcDialogueState | null = null;
 
   // World Groups & Objects
   private staticPlatforms!: Phaser.Physics.Arcade.StaticGroup;
@@ -96,6 +110,8 @@ export class GameplayScene extends Phaser.Scene {
     this.load.image('bg_moonlit_marsh', GENERATED_ASSETS.bgMoonlitMarsh);
     this.load.image('bg_hollow_below', GENERATED_ASSETS.bgHollowBelow);
     this.load.image('bg_windward_ruins', GENERATED_ASSETS.bgWindwardRuins);
+    this.load.image('bg_shattered_choir', GENERATED_ASSETS.bgShatteredChoir);
+    this.load.image('bg_heart_of_veil', GENERATED_ASSETS.bgHeartOfVeil);
     this.load.image('env_distant_canopy', GENERATED_ASSETS.envDistantCanopy);
     this.load.image('bg_canopy_giant_roots', GENERATED_ASSETS.bgCanopyGiantRoots);
     this.load.image('env_near_twisted_roots_raw', GENERATED_ASSETS.envNearTwistedRoots);
@@ -133,6 +149,10 @@ export class GameplayScene extends Phaser.Scene {
 
     kb.on('keydown-ESC', () => {
       if (!this.isTitleAttractMode) {
+        if (this.latestNpcDialogue) {
+          this.npcManager?.closeActiveDialogue();
+          return;
+        }
         this.callbacks?.onTogglePause();
       }
     });
@@ -163,9 +183,11 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private buildLevelWorld(): void {
-    if (this.envHazardSystem) {
-      this.envHazardSystem.destroy();
-    }
+    this.envHazardSystem?.destroy();
+    this.npcManager?.destroy();
+    this.enemyManager?.destroy();
+    this.pointerParallax?.destroy();
+
     this.children.removeAll(true);
     this.physics.world.colliders.destroy();
     this.platformVisuals = [];
@@ -175,7 +197,15 @@ export class GameplayScene extends Phaser.Scene {
     this.checkpoints = [];
     this.activeCheckpoint = null;
     this.trialElapsedSec = 0;
+    this.chapterElapsedSec = 0;
+    this.chapterDeaths = 0;
     this.latestDialogueBubble = null;
+    this.latestNpcPrompt = null;
+    this.latestNpcDialogue = null;
+
+    if (this.activeMode !== 'wake_trial') {
+      StoryJournalManager.unlockForChapterVisit(this.activeMode);
+    }
 
     const w = this.levelDef.width;
     const h = this.levelDef.height;
@@ -195,6 +225,7 @@ export class GameplayScene extends Phaser.Scene {
       this.isChapterRestored,
       biome
     );
+    this.pointerParallax = new PointerDepthParallaxSystem();
 
     // 2. GAMEPLAY PLANE: Authored Static Collision Bodies + Organic Terrain Visuals
     this.staticPlatforms = this.physics.add.staticGroup();
@@ -264,7 +295,7 @@ export class GameplayScene extends Phaser.Scene {
       this.wakeSystem.register(drifter);
     }
 
-    // Multi-Checkpoint Array with Supporting Platform Bound Clamping (Bug Priority D)
+    // Multi-Checkpoint Array with Supporting Platform Bound Clamping
     const cpSpecs =
       this.levelDef.checkpoints && this.levelDef.checkpoints.length > 0
         ? this.levelDef.checkpoints
@@ -329,9 +360,22 @@ export class GameplayScene extends Phaser.Scene {
     this.player = new Player(this, spawnX, spawnY);
     this.pip = new Pip(this, spawnX - 32, spawnY - 44);
 
-    // 6. Dialogue, Lighting, and Environmental Hazard Systems
+    // 6. Dialogue, NPCs, Enemies, Lighting, and Environmental Hazard Systems
     this.dialogueManager = new DialogueManager(this, this.activeMode);
     this.lightingSystem = new LightingSystem(this, biome, this.levelDef.platforms, this.isChapterRestored);
+
+    this.npcManager = new NPCManager(this, this.activeMode, this.levelDef.npcs || []);
+
+    this.enemyManager = new EnemyManager(
+      this,
+      this.levelDef.enemies || [],
+      SaveManager.getStoryDifficulty(),
+      () => {
+        if (!this.player.isRespawnProtected()) {
+          this.triggerHazardRespawn();
+        }
+      }
+    );
 
     this.envHazardSystem = new EnvironmentalHazardSystem(
       this,
@@ -345,6 +389,16 @@ export class GameplayScene extends Phaser.Scene {
       },
       (memSpec) => {
         this.dialogueManager.triggerById(memSpec.dialogueId);
+        this.npcManager.notifyPlayerWorldProgress();
+      },
+      (bellSpec) => {
+        const linkedIds = bellSpec.linkedBloomIds || [];
+        for (const bloom of this.blooms) {
+          if (linkedIds.includes(bloom.id)) {
+            bloom.onWakeActivated();
+          }
+        }
+        this.npcManager.notifyPlayerWorldProgress();
       }
     );
 
@@ -367,7 +421,7 @@ export class GameplayScene extends Phaser.Scene {
       }
     });
 
-    // 8. Close-Follow Camera Controller (42% from left, 58% from top)
+    // 8. Responsive Camera Controller (Landscape & Portrait)
     this.cameraController = new CameraController(this, w, h, spawnX, spawnY);
 
     // 9. Debug Hitbox & Radius Overlay Graphics
@@ -402,12 +456,23 @@ export class GameplayScene extends Phaser.Scene {
 
     const didFire = this.wakeSystem.tryTriggerWake(px, py);
     if (didFire) {
-      // Check if any checkpoint was newly activated via Wake
       for (const cp of this.checkpoints) {
-        if (cp.isActivated && Phaser.Math.Distance.Between(px, py, cp.sprite.x, cp.sprite.y - 36) <= activePhysicsTuning.wakeRadius + 24) {
+        if (
+          cp.isActivated &&
+          Phaser.Math.Distance.Between(px, py, cp.sprite.x, cp.sprite.y - 36) <=
+            activePhysicsTuning.wakeRadius + 24
+        ) {
           this.activeCheckpoint = cp;
         }
       }
+
+      this.enemyManager?.onWakePulse(px, py, activePhysicsTuning.wakeRadius);
+
+      const hasExtendedBridge = this.rootBridges.some((b) => b.state !== 'recessed');
+      if (hasExtendedBridge) {
+        this.npcManager?.notifyPlayerWorldProgress();
+      }
+
       this.player.triggerWakeAnimation();
       this.pip.triggerWakeReaction();
       this.environmentSystem.onWakePulse(px, py, activePhysicsTuning.wakeRadius);
@@ -420,6 +485,7 @@ export class GameplayScene extends Phaser.Scene {
   private triggerHazardRespawn(): void {
     if (this.player.isRespawnProtected()) return;
 
+    this.chapterDeaths++;
     AudioManager.playHazardRespawn();
     this.cameraController.triggerSubtleShake(160, 0.003);
 
@@ -430,6 +496,7 @@ export class GameplayScene extends Phaser.Scene {
       drifter.resetDeterministic();
     }
     this.envHazardSystem?.resetAllTransientHazards();
+    this.enemyManager?.resetAllEnemies();
 
     const firstPlatTop = this.levelDef.platforms[0]?.y ?? this.levelDef.spawnY + 44;
     const defaultSafeY = Player.getSafeCenterYForPlatformTop(firstPlatTop, 4);
@@ -469,7 +536,25 @@ export class GameplayScene extends Phaser.Scene {
     if (this.activeMode === 'wake_trial') {
       finishedTrialSec = Number(this.trialElapsedSec.toFixed(2));
       SaveManager.recordTrialCompletion(this.trialDifficulty, finishedTrialSec, this.trialSeed);
+      LeaderboardManager.recordCompletedRun({
+        mode: 'wake_trial',
+        targetId: 'wake_trial',
+        difficulty: this.trialDifficulty,
+        seed: this.trialSeed,
+        completionTimeSec: finishedTrialSec,
+        deaths: this.chapterDeaths,
+      });
     } else {
+      StoryJournalManager.unlockForChapterVisit(this.activeMode);
+      LeaderboardManager.recordCompletedRun({
+        mode: 'story_chapter',
+        targetId: this.activeMode,
+        difficulty: SaveManager.getStoryDifficulty(),
+        seed: null,
+        completionTimeSec: Number(Math.max(12, this.chapterElapsedSec).toFixed(2)),
+        deaths: this.chapterDeaths,
+      });
+
       const idx = CAMPAIGN_CHAPTERS.findIndex((c) => c.chapterId === this.activeMode);
       if (idx >= 0 && idx < CAMPAIGN_CHAPTERS.length - 1) {
         nextChapId = CAMPAIGN_CHAPTERS[idx + 1].chapterId;
@@ -534,7 +619,11 @@ export class GameplayScene extends Phaser.Scene {
   public update(_time: number, rawDeltaMs: number): void {
     const dt = Math.min(rawDeltaMs / 1000, 0.05);
 
-    // Bug Priority C Fix: Single-authority kinematic Drifter update with 2D passenger carrying
+    // Priority 2 Fix: Reset Nima's moving-surface flag before kinematic Drifters update and carry her
+    if (this.player) {
+      this.player.beginFrameCarryCheck();
+    }
+
     for (const drifter of this.drifters) {
       drifter.update(dt, this.isTitleAttractMode ? undefined : this.player);
     }
@@ -549,18 +638,33 @@ export class GameplayScene extends Phaser.Scene {
       this.cameraController.snapTo(panX, panY);
       this.pip.update(dt, this.player);
       this.latestDialogueBubble = null;
+      this.latestNpcPrompt = null;
+      this.latestNpcDialogue = null;
     } else {
-      if (this.activeMode === 'wake_trial' && !this.isChapterRestored) {
-        this.trialElapsedSec += dt;
+      if (!this.isChapterRestored) {
+        this.chapterElapsedSec += dt;
+        if (this.activeMode === 'wake_trial') {
+          this.trialElapsedSec += dt;
+        }
       }
 
       this.envHazardSystem?.update(dt, this.player);
+      this.enemyManager?.update(dt, this.player);
 
       this.player.update(
         dt,
         () => this.handleWakeAction(),
-        (x, y) => this.spawnLandingDust(x, y)
+        (x, y) => this.spawnLandingDust(x, y),
+        () => {
+          this.npcManager?.handleInteractInput();
+        }
       );
+
+      if (this.npcManager) {
+        const npcState = this.npcManager.update(dt, this.player.sprite.x, this.player.sprite.y);
+        this.latestNpcPrompt = npcState.nearbyPrompt;
+        this.latestNpcDialogue = npcState.activeDialogue;
+      }
 
       if (this.player.sprite.y > this.levelDef.height + 60) {
         this.triggerHazardRespawn();
@@ -571,6 +675,7 @@ export class GameplayScene extends Phaser.Scene {
         if (newlyLit) {
           this.activeCheckpoint = cp;
           this.dialogueManager.triggerEvent('checkpoint_reached');
+          this.npcManager?.notifyPlayerWorldProgress();
         }
       }
 
@@ -589,12 +694,18 @@ export class GameplayScene extends Phaser.Scene {
       this.cameraController.update(dt, this.player);
     }
 
+    const pointerOffset = this.pointerParallax
+      ? this.pointerParallax.update(dt)
+      : { normX: 0, normY: 0 };
+
     this.environmentSystem.update(
       dt,
       this.cameras.main.scrollX,
       this.player.sprite.x,
       this.player.body.bottom,
-      this.player.body.velocity.x
+      this.player.body.velocity.x,
+      pointerOffset.normX,
+      pointerOffset.normY
     );
 
     this.lightingSystem.update(
@@ -665,6 +776,11 @@ export class GameplayScene extends Phaser.Scene {
         this.debugGraphics.strokeRect(b.x, b.y, b.width, b.height);
       }
     });
+    if (this.enemyManager) {
+      for (const eb of this.enemyManager.getDebugBounds()) {
+        this.debugGraphics.strokeRect(eb.x, eb.y, eb.w, eb.h);
+      }
+    }
   }
 
   private emitTelemetry(): void {
@@ -691,7 +807,7 @@ export class GameplayScene extends Phaser.Scene {
       playerY: Math.round(this.player.sprite.y),
       velocityX: Math.round(this.player.body.velocity.x),
       velocityY: Math.round(this.player.body.velocity.y),
-      grounded: Boolean(this.player.body.blocked.down || this.player.body.touching.down),
+      grounded: this.player.isGrounded(),
       coyoteRemaining: Number(this.player.coyoteTimer.toFixed(2)),
       jumpBufferRemaining: Number(this.player.jumpBufferTimer.toFixed(2)),
       wakeCooldownRemaining: Number(this.wakeSystem.cooldownRemaining.toFixed(2)),
@@ -709,14 +825,36 @@ export class GameplayScene extends Phaser.Scene {
       totalMemoriesCount: this.envHazardSystem ? this.envHazardSystem.getTotalMemoryEchoesCount() : 0,
       chapterCompleted: this.isChapterRestored,
       activeDialogue: this.latestDialogueBubble,
+      nearbyNpcPrompt: this.latestNpcPrompt,
+      activeNpcDialogue: this.latestNpcDialogue,
+      unreadJournalCount: StoryJournalManager.getUnreadCount(),
       storyDifficulty: SaveManager.getStoryDifficulty(),
       trialElapsedSec: Number(this.trialElapsedSec.toFixed(1)),
       trialSeed: this.activeMode === 'wake_trial' ? this.trialSeed : null,
       trialDifficulty: this.activeMode === 'wake_trial' ? this.trialDifficulty : null,
+      chapterDeaths: this.chapterDeaths,
     });
   }
 
   // --- Public Commands Exposed to React Game Shell ---
+
+  public handleViewportResize(logicalW: number, logicalH: number): void {
+    this.cameras.main.setViewport(0, 0, logicalW, logicalH);
+    this.cameras.main.setSize(logicalW, logicalH);
+    this.environmentSystem?.handleViewportResize(logicalW, logicalH);
+    this.lightingSystem?.handleViewportResize(logicalW, logicalH);
+    if (this.cameraController && this.player) {
+      this.cameraController.onViewportResized(this.player.sprite.x, this.player.sprite.y);
+    }
+  }
+
+  public triggerNpcInteract(): void {
+    this.npcManager?.handleInteractInput();
+  }
+
+  public closeNpcDialogue(): void {
+    this.npcManager?.closeActiveDialogue();
+  }
 
   public setAttractMode(attract: boolean): void {
     this.isTitleAttractMode = attract;

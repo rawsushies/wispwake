@@ -20,11 +20,11 @@ interface TransientPulseLight {
 }
 
 /**
- * LightingSystem — Milestone 5 Hybrid Dynamic 2D / 2.5D Lighting System (Section 03 & 20).
+ * LightingSystem — Milestone 5 & 6 Hybrid Dynamic 2D / 2.5D Lighting System (Portrait & Landscape Adaptive).
  *
  * Fixes & Improvements:
- * 1. Overscanned High-Resolution Lightmap (`512x288` covering `-32..-32` to `992..572`):
- *    Prevents camera shake or sub-pixel scroll from ever exposing a rectangular border around the viewport.
+ * 1. Overscanned High-Resolution Lightmap that adapts dynamically to both Landscape (`960x540`)
+ *    and Portrait (`~420x680`) viewports without any rectangular border artifacts.
  * 2. Smooth 4-Stop Radial Falloff: Every light source and transient Wake pulse reaches 0.0 alpha smoothly
  *    along a circular radial gradient with zero square texture artifacts or double-brightening.
  * 3. Soft 2D Projected Drop Shadows & Normal-Style Directional Rim Highlights.
@@ -41,10 +41,10 @@ export class LightingSystem {
   private lightmapImage!: Phaser.GameObjects.Image;
 
   private readonly overscanPx = 32;
-  private readonly viewWidth = 960 + 64;
-  private readonly viewHeight = 540 + 64;
+  private viewWidth = 960 + 64;
+  private viewHeight = 540 + 64;
   private readonly mapWidth = 512;
-  private readonly mapHeight = 288;
+  private readonly mapHeight = 512;
 
   private transientPulses: TransientPulseLight[] = [];
   private platforms: PlatformSpec[] = [];
@@ -62,8 +62,19 @@ export class LightingSystem {
     this.platforms = platforms;
     this.isChapterRestored = initiallyRestored;
 
+    this.viewWidth = (scene.scale.width || 960) + this.overscanPx * 2;
+    this.viewHeight = (scene.scale.height || 540) + this.overscanPx * 2;
+
     this.createProjectedPlatformShadows();
     this.createDynamicLightmapOverlay();
+  }
+
+  public handleViewportResize(logicalW: number, logicalH: number): void {
+    this.viewWidth = logicalW + this.overscanPx * 2;
+    this.viewHeight = logicalH + this.overscanPx * 2;
+    if (this.lightmapImage) {
+      this.lightmapImage.setScale(this.viewWidth / this.mapWidth, this.viewHeight / this.mapHeight);
+    }
   }
 
   private createProjectedPlatformShadows(): void {
@@ -184,6 +195,10 @@ export class LightingSystem {
       ambientColor = '#6B88A2';
     } else if (this.biome === 'cavern') {
       ambientColor = '#586888';
+    } else if (this.biome === 'choir') {
+      ambientColor = '#6C78A6';
+    } else if (this.biome === 'heart') {
+      ambientColor = '#968B7E';
     } else if (this.biome === 'ruins') {
       ambientColor = '#889EB6';
     }
@@ -197,11 +212,16 @@ export class LightingSystem {
     const drawLight = (wx: number, wy: number, radiusPx: number, rgb: string, intensity: number) => {
       const lx = (wx - camX + this.overscanPx) * sx;
       const ly = (wy - camY + this.overscanPx) * sy;
-      const r = radiusPx * sx;
-      if (lx + r < -10 || lx - r > this.mapWidth + 10 || ly + r < -10 || ly - r > this.mapHeight + 10) {
+      const rx = radiusPx * sx;
+      const ry = radiusPx * sy;
+      if (lx + rx < -10 || lx - rx > this.mapWidth + 10 || ly + ry < -10 || ly - ry > this.mapHeight + 10) {
         return;
       }
-      const grad = ctx.createRadialGradient(lx, ly, r * 0.04, lx, ly, r);
+
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.scale(rx, ry);
+      const grad = ctx.createRadialGradient(0, 0, 0.04, 0, 0, 1);
       const a0 = Math.min(1, intensity);
       grad.addColorStop(0, `rgba(${rgb}, ${a0.toFixed(3)})`);
       grad.addColorStop(0.38, `rgba(${rgb}, ${(a0 * 0.56).toFixed(3)})`);
@@ -209,8 +229,9 @@ export class LightingSystem {
       grad.addColorStop(1, `rgba(${rgb}, 0)`);
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(lx, ly, r, 0, Math.PI * 2);
+      ctx.arc(0, 0, 1, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
     };
 
     // Nima's warm living seed illumination
@@ -219,7 +240,7 @@ export class LightingSystem {
     // Pip's cool Wake Mint illumination
     drawLight(pipX, pipY, 155, '143, 231, 199', 0.78);
 
-    // World lights (Checkpoints, Awakened Blooms, Root Bridges, Ancient Bloom)
+    // World lights (Checkpoints, Awakened Blooms, Root Bridges, Ancient Bloom, NPCs)
     for (const light of worldLights) {
       drawLight(light.x, light.y, light.radius, light.colorHex, light.intensity);
     }
@@ -262,8 +283,9 @@ export class LightingSystem {
       }
     }
 
+    const activeViewW = this.viewWidth;
     for (const plat of this.platforms) {
-      if (plat.x + plat.width < camX - 80 || plat.x > camX + 1040) continue;
+      if (plat.x + plat.width < camX - 80 || plat.x > camX + activeViewW + 80) continue;
 
       for (const src of activeSources) {
         const dy = plat.y - src.y;

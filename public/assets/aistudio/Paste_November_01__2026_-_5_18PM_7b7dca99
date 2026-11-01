@@ -1,0 +1,2565 @@
+
+PROJECT: WIS PWAKE
+MILESTONE 6 — THE LIVING ADVENTURE
+
+CHARACTER CORRECTION, PHYSICS, SIX-CHAPTER CAMPAIGN,
+NPCs, HOSTILE CREATURES, STORY JOURNAL, LEADERBOARD,
+MOUSE-DRIVEN DEPTH PARALLAX AND VISUAL POLISH.
+
+============================================================
+PROJECT INFORMATION
+============================================================
+
+Project:
+Wispwake — A Journey Through a Sleeping World
+
+GitHub:
+https://github.com/rawsushies/wispwake
+
+Latest inspected baseline:
+01ce2c08160e68bfe8c07f54589f927a27232edc
+
+Canonical design document:
+Wispwake — Game Design & Visual Bible
+
+Engine:
+React 19 + TypeScript + Vite + Phaser 3 + Arcade Physics.
+
+Genre:
+2D cinematic fantasy exploration platformer.
+
+World:
+The Veilgrove.
+
+Protagonist:
+Nima.
+
+Companion:
+Pip.
+
+Signature mechanic:
+Wake.
+
+============================================================
+00. DEVELOPMENT OBJECTIVE
+============================================================
+
+We are continuing an existing playable project.
+
+Do not create a new project.
+
+Do not replace the existing architecture.
+
+Do not discard the previous campaign.
+
+Do not overwrite existing approved artwork without
+understanding its purpose.
+
+This milestone has seven objectives:
+
+1. Correct Nima's unintended trouser/legging rendering
+   and improve her actual running animation.
+
+2. Fix the jellyfish-like Drifter's collision so Nima
+   can reliably land on and ride it.
+
+3. Expand the existing four-chapter campaign to SIX
+   complete playable chapters.
+
+4. Introduce friendly NPCs and hostile creatures with
+   deterministic parametric movement and actual AI behavior.
+
+5. Implement a persistent Story Journal and Leaderboard.
+
+6. Fix Pip's speech bubble attachment and introduce
+   a desktop-only mouse-driven environmental depth effect.
+
+7. Replace the character-design-sheet image in Credits
+   with an illustration representing the entire Wispwake world.
+
+Also preserve every previously requested gameplay,
+visual, accessibility, menu, mobile and repository requirement.
+
+============================================================
+01. INSPECT AND PRESERVE THE REPOSITORY
+============================================================
+
+Inspect the latest main branch before editing.
+
+The supplied commit is a reference point, not a guarantee
+that it is still the newest commit.
+
+Inspect:
+
+src/App.tsx
+
+src/game/scenes/GameplayScene.ts
+
+src/game/entities/player/Player.ts
+
+src/game/entities/companion/Pip.ts
+
+src/game/entities/creatures/Drifter.ts
+
+src/game/systems/CharacterArtManager.ts
+
+src/game/systems/AtlasBuilder.ts
+
+src/game/systems/WakeSystem.ts
+
+src/game/systems/LightingSystem.ts
+
+src/game/systems/DialogueManager.ts
+
+src/game/systems/LivingEnvironmentSystem.ts
+
+src/game/systems/EnvironmentalHazardSystem.ts
+
+src/game/systems/InputManager.ts
+
+src/game/systems/SaveManager.ts
+
+src/game/systems/LevelRegistry.ts
+
+src/game/systems/WakeTrialsGenerator.ts
+
+src/game/systems/TraversalSimulationValidator.ts
+
+src/game/systems/CameraController.ts
+
+src/game/levels/sleepingCanopy/levelData.ts
+
+src/game/dialogue/dialogueData.ts
+
+src/game/config/gameConfig.ts
+
+src/game/config/physicsTuning.ts
+
+ASSET_MANIFEST.md
+
+README.md
+
+CHANGELOG.md
+
+LICENSE
+
+ASSET_LICENSE.md
+
+package.json
+
+scripts/verifyMilestone5.ts
+
+scripts/playtestAndCaptureMilestone5.mjs
+
+Also inspect all related files and assets.
+
+Create a recoverable Git checkpoint before making
+major modifications.
+
+Preserve:
+- Existing four campaign chapters.
+- Existing level artwork.
+- Existing approved Pip animation.
+- Existing player movement behavior.
+- Existing Wake mechanic.
+- Existing save data.
+- Existing mobile controls.
+- Existing lighting configuration.
+- Existing chapter progression.
+
+Do not repeat work that already works.
+
+However, do not accept previous milestone claims
+without testing the actual implementation.
+
+============================================================
+02. PRIORITY ONE — CORRECT NIMA'S CLOTHING AND ANIMATION
+============================================================
+
+CURRENT USER COMPLAINT:
+
+Nima's running animation now looks as though there is
+an additional pair of trousers or a leggings layer.
+
+This visual result is not approved.
+
+CANONICAL ARTWORK:
+
+src/assets/images/ref_nima_pip_concept_1793515706089.jpg
+
+src/assets/images/nima_side_gameplay_master_1793518602554.jpg
+
+RUNNING POSES:
+
+src/assets/images/nima_run_contact_pose_1793520804478.jpg
+
+src/assets/images/nima_run_passing_pose_1793520806672.jpg
+
+Inspect the actual images before changing the art pipeline.
+
+ROOT IMPLEMENTATION PROBLEM:
+
+CharacterArtManager.ts currently:
+
+- Cuts out Nima's original lower-body trousers.
+- Reconstructs the lower body using Canvas drawing.
+- Introduces procedural trouser segments.
+- Adds independent trouser highlights and shading.
+- Adds new knee patches, cuffs and ankle-wrap details.
+- Composites the newly generated legs with the original
+  upper-body artwork.
+
+This has resulted in an unnecessarily altered clothing style.
+
+The user did not request an additional clothing design.
+
+THE DESIGN AUTHORITY IS THE ORIGINAL NIMA ARTWORK.
+
+PRESERVE:
+
+- Original brown trousers.
+- Original clothing silhouette.
+- Original stitched details.
+- Original colors.
+- Original material appearance.
+- Original footwear and wraps.
+- Original leaf cloak.
+- Original satchel.
+- Original glowing seed.
+- Original body proportions.
+
+NON-NEGOTIABLE:
+
+Nima must have ONE consistent pair of trousers.
+
+Do not create an additional leggings layer.
+
+Do not overlay another pair of pants over the original.
+
+Do not invent an additional skirt, shorts, stockings,
+knee guards, cuffs or footwear styling.
+
+Do not use the old procedural trousers as a second
+visible garment layer.
+
+ANIMATION STRATEGY:
+
+The preferred solution is a sequence of consistent,
+fully illustrated character poses derived from the
+canonical Nima reference.
+
+Generate 8–12 full-body running keyframes.
+
+Every frame must preserve the exact established outfit.
+
+If using a cutout animation rig:
+
+- Extract the actual original clothing.
+- Separate only the anatomical components that need
+  independent movement.
+- Preserve the garment's original silhouette.
+- Ensure each trouser leg belongs to the SAME garment.
+- Do not redraw new clothing over the original.
+- Ensure no duplicated fabric or overlapping trousers.
+
+If generating individual keyframes:
+
+- Use the same approved character reference.
+- Keep character proportions consistent.
+- Keep facial identity consistent.
+- Keep the satchel and seed in consistent positions.
+- Keep the cloak consistent.
+- Keep the trousers identical in design.
+
+RUNNING CYCLE:
+
+1. Contact.
+2. Downward compression.
+3. Passing.
+4. High point.
+5. Opposite contact.
+6. Opposite compression.
+7. Opposite passing.
+8. Recovery.
+
+Use additional frames where appropriate.
+
+MOVEMENT:
+
+- Natural alternating legs.
+- Proper foot contact.
+- Natural weight transfer.
+- Consistent torso movement.
+- Controlled hair motion.
+- Natural cloak movement.
+- No floating.
+- No duplicate limbs.
+- No sudden costume changes.
+
+Maintain the existing player collision body.
+
+Do not change the character's hitbox simply to
+accommodate an artwork mistake.
+
+PIP:
+
+Pip's existing artwork and animation are approved.
+
+Do not regenerate Pip unnecessarily.
+
+ACCEPTANCE:
+
+Capture the actual Nima running animation.
+
+Inspect every frame.
+
+Show that the trouser silhouette remains consistent.
+
+If the trousers look like two independent overlapping
+garments, the animation is not approved.
+
+============================================================
+03. PRIORITY TWO — RESTORE DRIFTER COLLISION
+============================================================
+
+CURRENT USER COMPLAINT:
+
+The jellyfish-like Drifter no longer glitches its movement,
+but Nima now falls through it when attempting to land.
+
+The previous movement fix has created a collision problem.
+
+Relevant files:
+
+src/game/entities/creatures/Drifter.ts
+
+src/game/entities/player/Player.ts
+
+src/game/scenes/GameplayScene.ts
+
+CURRENT IMPLEMENTATION:
+
+The Drifter uses a kinematic Arcade Physics body.
+
+Its movement is controlled by:
+
+- body.moves = false.
+- sprite.setPosition().
+- body.updateFromGameObject().
+
+It uses a small collision body:
+
+116 x 22 pixels.
+
+Its body is offset from the visual sprite.
+
+It also has collision directions disabled to create
+top-only platform behavior.
+
+Do not assume that the new implementation is correct
+merely because the movement is smooth.
+
+IMPORTANT:
+
+A moving platform must be both:
+
+A. Visually moving.
+
+B. Physically landable.
+
+The current version may satisfy A while failing B.
+
+ROOT-CAUSE INVESTIGATION:
+
+Reproduce the problem in the actual game.
+
+Inspect:
+
+- Arcade Physics body position.
+- Visible sprite position.
+- Body size.
+- Body offset.
+- Body top coordinate.
+- Visible moss-cap top coordinate.
+- Collision direction flags.
+- Body enabled state.
+- updateFromGameObject timing.
+- Collider process callbacks.
+- Physics update order.
+- Passenger-carry timing.
+- Player grounded-state handling.
+
+Do not assume body.moves = false alone disables collision.
+
+Verify the correct semantics for the actual Phaser
+3.87 implementation.
+
+Do not blindly change the flag without testing.
+
+REQUIRED COLLISION:
+
+The Drifter must work as a reliable one-way moving platform.
+
+Nima must be able to:
+
+- Land on the top.
+- Stand on the top.
+- Remain standing while it moves.
+- Walk on the platform.
+- Jump off normally.
+- Pass through the underside while jumping upward.
+- Avoid unwanted side collisions.
+- Ride horizontal movement.
+- Ride vertical movement.
+
+MOVEMENT ARCHITECTURE:
+
+Use ONE authoritative movement method.
+
+The sprite and physics body must remain synchronized.
+
+Do not apply identical displacement through both
+manual positioning and physics velocity integration.
+
+For a kinematic implementation:
+
+- Update the body at the correct time.
+- Keep it enabled for collision.
+- Ensure the collision body follows the visual surface.
+- Implement reliable top-landing detection.
+- Use appropriate Arcade Physics process and collision
+  callbacks where necessary.
+- Track passenger state using real collision contact,
+  not only approximate proximity.
+
+PLAYER CARRYING:
+
+When Nima is actually standing on the Drifter:
+
+- Carry horizontal displacement.
+- Carry vertical displacement.
+- Maintain correct feet-to-surface alignment.
+- Do not double-apply movement.
+- Do not erase intended jump input.
+- Release passenger state immediately when jumping off.
+
+Check that Player.body and Player.sprite remain synchronized.
+
+VISUAL ALIGNMENT:
+
+The collision body's upper edge must match the
+visible mossy crown.
+
+Do not use a collision body that sits below the
+visible walkable surface.
+
+Expose its bounds in development-only debug mode
+so the developer can compare the visual and physical
+surfaces.
+
+TEST:
+
+1. Nima approaches the Drifter.
+2. Nima jumps onto its top.
+3. Nima lands and becomes grounded.
+4. Nima remains on it for at least 10 seconds.
+5. Drifter travels horizontally.
+6. Drifter travels vertically.
+7. Drifter reverses direction.
+8. Nima walks on its surface.
+9. Nima jumps off.
+10. Nima jumps upward through its underside.
+11. Nima lands on the same platform again.
+12. Nima dies while it is moving.
+13. The Drifter resets correctly.
+
+Test every campaign chapter containing Drifters.
+
+Especially test:
+- Moonlit Marsh.
+- Hollow Below.
+- Windward Ruins.
+
+The Drifter is not complete until Nima can reliably
+land and remain on it.
+
+============================================================
+04. PRESERVE AND VERIFY ALL PREVIOUS BUG FIXES
+============================================================
+
+These remain regression requirements.
+
+A. WAKE RECTANGULAR GLOW
+
+The earlier Wake effect had a visible rectangular boundary.
+
+The current WakeSystem uses circular Phaser Graphics
+for its animated pulse.
+
+Preserve this improvement.
+
+However, LightingSystem still uses a full-screen
+CanvasTexture for ambient and localized illumination.
+
+Inspect the interaction between these systems.
+
+Verify:
+- Circular alpha falloff.
+- No rectangular glow boundary.
+- No blocky full-screen texture edges.
+- No sudden color discontinuities.
+- No overlapping glow artifacts.
+
+Test all four existing biomes and new content.
+
+B. CHECKPOINT RESPAWN
+
+The earlier bug caused Nima to fall after respawning.
+
+Preserve the safe spawn calculation.
+
+Preserve Player.getSafeCenterYForPlatformTop().
+
+Preserve body.reset() and state clearing.
+
+Verify:
+
+- Actual collision-body bottom.
+- Supporting platform top.
+- Correct spawn X.
+- Correct spawn Y.
+- Camera snap.
+- Pip snap.
+- Velocity reset.
+- Jump state reset.
+- Input state reset.
+- Respawn protection.
+- Multiple repeated deaths.
+- Browser refresh persistence.
+
+Do not remove the previous fixes during this milestone.
+
+C. MAIN MENU
+
+Preserve EXACTLY THREE TITLE-SCREEN ACTIONS:
+
+PLAY
+SETTINGS
+CREDITS
+
+PLAY opens the combined selection interface.
+
+The selection interface contains:
+
+STORY JOURNEY:
+- All campaign chapters.
+- Story difficulty.
+- Unlock state.
+- Completion state.
+- Continue journey.
+
+WAKE TRIALS:
+- Easy.
+- Medium.
+- Hard.
+- Extreme.
+- Seed input.
+- Seed randomization.
+- Personal records.
+
+Do not add Journal or Leaderboard as extra primary
+title-screen buttons.
+
+Journal and Leaderboard should be accessed through
+appropriate in-game and Play Selection navigation.
+
+D. PIP COMPANION
+
+Preserve:
+- Current visual identity.
+- Current animation.
+- Follow behavior.
+- Wake reaction.
+- Curiosity behavior.
+- Authored dialogue.
+
+E. MOBILE
+
+Preserve:
+- Keyboard controls.
+- Touch controls.
+- Gamepad controls.
+- Responsive layouts.
+- Landscape-first gameplay.
+- Existing accessibility settings.
+
+F. OPEN SOURCE
+
+Preserve:
+- README.
+- CONTRIBUTING.
+- LICENSE.
+- ASSET_LICENSE.
+- CHANGELOG.
+- SECURITY.
+- CODE_OF_CONDUCT.
+- GitHub issue templates.
+- Pull request template.
+
+Update them for the new project content.
+
+============================================================
+05. CAMPAIGN EXPANSION — SIX COMPLETE CHAPTERS
+============================================================
+
+CURRENT CAMPAIGN:
+
+01. The Sleeping Canopy.
+02. The Moonlit Marsh.
+03. The Hollow Below.
+04. The Windward Ruins.
+
+Keep all four.
+
+They are already expanded into longer adventures.
+
+Do not replace their existing levels.
+
+NEW OBJECTIVE:
+
+Expand the campaign to SIX complete chapters.
+
+Add:
+
+05. The Shattered Choir.
+06. The Heart of the Veil.
+
+These are additional story chapters, not replacements
+for the previous four.
+
+ALL SIX CHAPTERS MUST BE ACTUALLY PLAYABLE.
+
+Do not create chapter cards that launch empty maps.
+
+Do not create a level registry entry without a functional
+level implementation.
+
+Do not use one repeated layout with different backgrounds.
+
+============================================================
+06. CHAPTER 05 — THE SHATTERED CHOIR
+============================================================
+
+Working title:
+The Shattered Choir.
+
+BIOME IDENTITY:
+
+An ancient region of suspended stone sanctuaries,
+resonance structures and broken singing monuments
+woven into the upper roots of the Veilgrove.
+
+VISUAL DIRECTION:
+
+- Huge suspended bells.
+- Broken stone amphitheaters.
+- Hanging ancient instruments.
+- Glowing resonance crystals.
+- Floating fragments of ancient structures.
+- Twilight violet skies.
+- Pale moss and silver-green vegetation.
+- Ancient bridges held by living roots.
+- Atmospheric sound and light.
+- Distant structures suspended in mist.
+
+Create original artwork for this environment.
+
+Do not reuse Windward Ruins backgrounds as a substitute.
+
+GAMEPLAY SYSTEMS:
+
+A. RESONANCE STRUCTURES
+
+Create environmental structures that react to Wake.
+
+Some should produce:
+- Temporary platforms.
+- Extended bridges.
+- Moving objects.
+- Opened routes.
+- Environmental sound cues.
+
+B. CHANGING PLATFORM SEQUENCES
+
+Create platform structures that move according to
+readable resonance patterns.
+
+C. SOUND-BASED ENVIRONMENTAL PUZZLES
+
+Use clear visual and audio cues.
+
+Do not make progression depend entirely on hearing.
+
+Provide visual rhythm indicators for accessibility.
+
+D. ADVANCED MOVING-PLATFORM TRAVERSAL
+
+Use longer and more complicated Drifter transfers.
+
+E. MULTI-STAGE PUZZLES
+
+Require players to awaken several structures in
+the correct sequence.
+
+F. HOSTILE CREATURES
+
+Introduce the first more advanced Hushed enemies.
+
+CHAPTER STRUCTURE:
+
+Create at least 10 distinct sub-areas.
+
+Target:
+Approximately 20–30 substantial platform formations,
+multiple moving surfaces, several optional routes,
+and at least four meaningful checkpoints.
+
+The level should target 18–25 minutes of first-play content.
+
+Avoid empty walking sections.
+
+NARRATIVE:
+
+The Shattered Choir once carried the ancient tree's
+resonance through the upper roots.
+
+Its silence disrupted the connection between
+different regions.
+
+Nima and Pip discover that the tree communicated
+through a network of living resonances.
+
+Pip recognizes the choir's melody.
+
+Introduce at least one memorable friendly NPC who
+remembers the old songs.
+
+Possible NPC:
+The Bellkeeper.
+
+The Bellkeeper should have:
+- A recognizable original design.
+- Actual animation.
+- A world location.
+- Contextual interaction.
+- Dialogue.
+- An optional discovery or side objective.
+
+Do not use a static glowing circle as an NPC.
+
+CHAPTER CLIMAX:
+
+Reassemble the broken resonance route.
+
+Create a setpiece where multiple structures awaken
+in sequence across the environment.
+
+The visual and audio feedback should make the
+restoration memorable.
+
+============================================================
+07. CHAPTER 06 — THE HEART OF THE VEIL
+============================================================
+
+Working title:
+The Heart of the Veil.
+
+This is the major conclusion of the expanded campaign.
+
+BIOME IDENTITY:
+
+An ancient inner region beneath and beyond the
+central tree network.
+
+The place should feel unfamiliar, mysterious and
+almost sacred.
+
+ENVIRONMENT:
+
+- Enormous ancient root chambers.
+- Rivers of glowing sap.
+- Deep vertical spaces.
+- Vast biological structures.
+- Floating root fragments.
+- Ancient memory formations.
+- Strange organic architecture.
+- The remains of the original heartbeat.
+- Large-scale atmospheric compositions.
+
+Avoid making this simply another dark cave.
+
+Use a distinctive, memorable color identity.
+
+GAMEPLAY:
+
+- Advanced multi-stage platforming.
+- Complex Wake chains.
+- Moving Drifter transfers.
+- Parametric hostile creatures.
+- Timed environmental hazards.
+- Multi-level traversal.
+- Large interconnected puzzles.
+- Precision sequences.
+- Optional high-skill secrets.
+- A substantial final mastery sequence.
+
+TARGET:
+
+At least 10 distinct sub-areas.
+
+Approximately 25–35 substantial platforming formations
+where appropriate.
+
+At least four meaningful checkpoints.
+
+Target 22–30 minutes of first-play content.
+
+NARRATIVE:
+
+The player finally reaches the damaged heart
+of the Veilgrove.
+
+The truth is revealed:
+
+The Stillness was an ancient protective response.
+
+The central heart had suffered damage, and the
+protective network shut down the tree's communication
+to prevent the damage from spreading.
+
+Pip remembers its true connection to the First Bloom.
+
+Nima discovers that restoring the Veilgrove requires
+more than simply lighting every flower.
+
+The player must reconnect the ancient system.
+
+FINAL CLIMAX:
+
+Create a multi-stage final encounter.
+
+It should involve:
+- Advanced environmental traversal.
+- Hostile guardian behavior.
+- Wake-based interaction.
+- Several distinct phases.
+- A meaningful final puzzle.
+- Environmental transformation.
+- An emotional Nima and Pip story moment.
+
+Do not make this a generic health-bar boss fight.
+
+The final encounter should feel like a culmination
+of the mechanics and story the player has learned.
+
+Create a satisfying ending for the first complete
+Wispwake adventure.
+
+Do not end the campaign abruptly.
+
+============================================================
+08. CAMPAIGN LEVEL ARCHITECTURE
+============================================================
+
+Update all relevant campaign structures.
+
+IMPORTANT FILES:
+
+LevelRegistry.ts
+gameConfig.ts
+SaveManager.ts
+GameplayScene.ts
+App.tsx
+dialogueData.ts
+ASSET_MANIFEST.md
+README.md
+CHANGELOG.md
+
+The current CampaignChapterId union only contains
+the original four chapters.
+
+Extend it to six.
+
+Update the chapter registry.
+
+Update the chapter order.
+
+Update chapter selection.
+
+Update chapter unlock progression.
+
+Update chapter art maps.
+
+Update chapter difficulty.
+
+Update save data.
+
+Update all campaign references.
+
+Ensure no old hard-coded 4-chapter assumptions remain.
+
+CAMPAIGN LENGTH:
+
+Keep the existing four extended chapters.
+
+Add the two new chapters.
+
+Each chapter must have:
+- 10 or more distinct sub-areas.
+- Unique gameplay arrangements.
+- At least four checkpoints where appropriate.
+- Optional exploration paths.
+- Environmental puzzles.
+- Pip narrative events.
+- A memorable setpiece.
+- A real chapter climax.
+- A meaningful ending or transition.
+
+Every chapter must contain its own actual level geometry.
+
+Platform formations should vary in:
+- Height.
+- Width.
+- Shape.
+- Vertical placement.
+- Traversal function.
+- Hazard relationship.
+- Environmental context.
+
+Avoid sequences of identical rectangular platforms.
+
+Keep collision geometry reliable and separate
+from decorative artwork.
+
+============================================================
+09. STORY DIFFICULTY AND HARDER LEVELS
+============================================================
+
+Preserve the current Story Difficulty system.
+
+Available difficulties:
+
+EASY
+MEDIUM
+HARD
+EXTREME
+
+Difficulty must meaningfully alter traversal challenges.
+
+EASY:
+- Wider landing surfaces.
+- Generous timing.
+- More frequent checkpoints.
+- More forgiving routes.
+
+MEDIUM:
+- Meaningful precision.
+- Mixed mechanics.
+- Moderate hazard complexity.
+
+HARD:
+- Narrower landing zones.
+- Long chained sequences.
+- More demanding timing.
+- Complex moving-platform transfers.
+- More difficult environmental puzzles.
+
+EXTREME:
+- Expert precision platforming.
+- Advanced combinations.
+- Long difficult sequences.
+- Complex moving-platform transfers.
+- Consecutive Wake timing.
+- More difficult hostile creature patterns.
+- Longer sections between checkpoints.
+
+Do not make Extreme impossible.
+
+Do not reduce movement responsiveness.
+
+Do not introduce arbitrary physics changes.
+
+Difficulty must come primarily from level design,
+timing, route combinations and environmental mastery.
+
+All six chapters must support Story Difficulty.
+
+Difficulty configuration must not leak between scenes.
+
+============================================================
+10. NPC SYSTEM — FRIENDLY WORLD CHARACTERS
+============================================================
+
+Introduce a reusable NPC architecture.
+
+NPCs are actual characters that inhabit the Veilgrove.
+
+They must not be decorative objects that merely
+display text when approached.
+
+Create a reusable system for:
+
+- NPC definition.
+- NPC location.
+- Character artwork.
+- Animation.
+- Idle behavior.
+- Movement behavior where appropriate.
+- Interaction detection.
+- Dialogue.
+- Quest state.
+- Journal entries.
+- Save persistence.
+
+INITIAL NPC TYPES:
+
+A. THE BELLKEEPER
+
+An ancient caretaker associated with the Shattered Choir.
+
+B. THE ROOTKEEPER
+
+A gentle creature that knows the ancient root pathways.
+
+C. THE TIDE-WATCHER
+
+A marsh inhabitant who remembers the old waterways.
+
+D. THE LAST GARDENER
+
+A character connected to the original protection
+of the Veilgrove.
+
+These are proposed archetypes.
+
+Create original names, appearances and personalities.
+
+Do not make every NPC look like Nima or Pip.
+
+NPC ART:
+
+Use original artwork generated through the
+Google AI Studio DEVELOPMENT WORKSPACE.
+
+Generate assets for:
+- Full-body references.
+- Side-view gameplay orientation.
+- Idle animation.
+- Talk animation.
+- Appropriate movement animations.
+
+Use consistent materials and lighting.
+
+INTERACTION:
+
+Use a dedicated interaction action.
+
+Desktop:
+F or an appropriate existing interaction key.
+
+Mobile:
+A contextual interaction button.
+
+Gamepad:
+An assigned interaction button.
+
+Do not overload Wake input.
+
+When Nima approaches an NPC:
+
+- Show a subtle interaction hint.
+- Allow interaction.
+- Display an elegant dialogue interface.
+- Allow continuing or dismissing dialogue.
+- Preserve contextual story progression.
+
+NPCs may provide:
+
+- Main story information.
+- Optional stories.
+- Hints.
+- Journal entries.
+- Environmental quests.
+- Secret location information.
+
+Avoid excessive dialogue.
+
+NPC interactions should feel meaningful.
+
+============================================================
+11. HOSTILE CREATURE SYSTEM — PARAMETRIC MOB AI
+============================================================
+
+Introduce hostile creatures that make traversal
+more interesting and demanding.
+
+The term parametric refers to deterministic movement
+defined using parameters and trajectories.
+
+Use predictable mathematical movement functions
+rather than arbitrary random wandering.
+
+Possible trajectory functions:
+
+- Sine-wave patrol.
+- Cosine patrol.
+- Bezier curves.
+- Elliptical flight.
+- Waypoint loops.
+- Controlled pursuit.
+- Deterministic state-based movement.
+
+Create at least THREE distinct hostile archetypes.
+
+ENEMY A — HUSHED STALKER
+
+Ground-based hostile creature.
+
+Behavior:
+- Patrol.
+- Detect Nima within a defined range.
+- Enter alert state.
+- Telegraph a short charge.
+- Charge along a controlled path.
+- Recover.
+- Return to patrol.
+
+ENEMY B — GLOOM MOTH
+
+Flying hostile creature.
+
+Behavior:
+- Follows a parametric flying route.
+- Detects Nima.
+- Changes direction visibly.
+- Telegraphs a swoop.
+- Performs a controlled attack trajectory.
+- Recovers and returns to patrol.
+
+ENEMY C — ROOTBOUND SENTINEL
+
+Stationary or semi-stationary creature.
+
+Behavior:
+- Guards a defined area.
+- Telegraphs root-based attacks.
+- Produces predictable ground hazards.
+- Has clear recovery periods.
+- Reacts to Wake.
+
+Add additional types where appropriate.
+
+AI STATE SYSTEM:
+
+Every hostile creature should have states such as:
+
+IDLE
+PATROL
+ALERT
+TELEGRAPH
+ATTACK
+RECOVER
+STUNNED
+DEFEATED_OR_RETREATED
+
+Movement must be deterministic and testable.
+
+HOSTILE CREATURE FAIRNESS:
+
+- Visible attack telegraphs.
+- Readable movement.
+- Fair collision bounds.
+- Predictable behavior.
+- No unavoidable spawn attacks.
+- No random movement that ignores player control.
+- No invisible attacks.
+- No hostile creatures placed directly at checkpoint spawn.
+
+WAKE INTERACTION:
+
+Wake should be able to interact with eligible hostile mobs.
+
+Depending on their type, it may:
+- Stun briefly.
+- Interrupt an attack.
+- Push back.
+- Disable a shield.
+- Open an environmental route.
+
+Not every enemy must behave identically.
+
+Do not make Wake instantly defeat every enemy.
+
+Do not add a conventional weapon system unless
+there is a clear gameplay reason.
+
+Wispwake remains an exploration-platformer.
+
+The player should primarily evade, observe, time,
+and strategically use Wake.
+
+DIFFICULTY:
+
+Easy:
+Slower attacks and generous telegraphs.
+
+Medium:
+More varied movement and moderate pressure.
+
+Hard:
+Combined enemy and traversal challenges.
+
+Extreme:
+More complex trajectories and combinations,
+with fair telegraphing and recovery windows.
+
+NPCs must never be treated as hostile entities.
+
+Keep friendly NPCs and hostile mobs separate.
+
+============================================================
+12. STORY JOURNAL — PERSISTENT DISCOVERY SYSTEM
+============================================================
+
+Implement a proper Story Journal.
+
+The current SaveManager stores discovered Memory Echoes,
+but there is no complete player-facing journal.
+
+Build the journal using existing lore and memory data.
+
+JOURNAL ACCESS:
+
+- In-game Pause menu.
+- A small optional HUD journal/book icon.
+- Appropriate Play Selection navigation if useful.
+
+Do not add a fourth or fifth primary title-screen button.
+
+JOURNAL CATEGORIES:
+
+A. STORY
+
+Main narrative discoveries and chapter summaries.
+
+B. MEMORIES
+
+All discovered Memory Echoes.
+
+C. CHARACTERS
+
+Nima, Pip, friendly NPCs, known hostile creatures
+and other important characters.
+
+D. PLACES
+
+Important regions, landmarks and environmental discoveries.
+
+E. CREATURES
+
+Entries about the different living organisms
+and hostile species.
+
+F. QUESTS
+
+Optional objectives and NPC tasks.
+
+JOURNAL BEHAVIOR:
+
+- Entries unlock only when discovered.
+- Newly discovered entries show an unread indicator.
+- Opening an entry marks it as read.
+- Progress persists after refreshing the browser.
+- Locked entries do not reveal major story spoilers.
+- Organize content by chapter.
+- Include original environmental illustrations where appropriate.
+- Provide readable, concise descriptions.
+
+MEMORY ECHO INTEGRATION:
+
+When Nima discovers a Memory Echo:
+
+1. Trigger its existing story event.
+2. Record the discovery.
+3. Create or unlock the journal entry.
+4. Display a subtle journal notification.
+5. Preserve the once-per-save behavior.
+
+NPC INTEGRATION:
+
+Important NPC conversations may unlock:
+- Character entries.
+- New story records.
+- Quest entries.
+- Location discoveries.
+
+Do not create hundreds of unnecessary entries.
+
+Make the journal feel like Nima's personal record
+of the journey.
+
+VISUAL DESIGN:
+
+Use an illustrated field journal aesthetic.
+
+Possible elements:
+- Soft paper or botanical textures.
+- Handwritten-style accents.
+- Original environmental thumbnails.
+- Small creature illustrations.
+- Elegant page transitions.
+- Chapter tabs.
+
+Keep the interface consistent with Wispwake's
+dark magical palette.
+
+Do not make it look like a modern corporate dashboard.
+
+============================================================
+13. LEADERBOARD — LOCAL AND ONLINE RECORDS
+============================================================
+
+Implement a proper leaderboard system.
+
+The current SaveManager only stores one personal-best
+trial time per difficulty.
+
+That is not a complete leaderboard.
+
+FIRST: LOCAL LEADERBOARD
+
+Implement a functional local leaderboard that works
+without an online service.
+
+Record:
+- Player display name or local nickname.
+- Game mode.
+- Chapter or trial.
+- Difficulty.
+- Seed where applicable.
+- Completion time.
+- Death count.
+- Score.
+- Completion date.
+
+WAKE TRIAL LEADERBOARD:
+
+Sort primarily by:
+- Fastest valid completion time.
+
+Use tie-breaks such as:
+- Fewer deaths.
+- Higher completion score.
+- Earlier achievement time.
+
+CAMPAIGN RECORDS:
+
+Track:
+- Fastest chapter completion.
+- Difficulty completed.
+- Death count.
+- Memory Echoes discovered.
+- Optional secrets discovered.
+
+PERSISTENCE:
+
+Save local leaderboard entries.
+
+Do not erase previous personal bests unnecessarily.
+
+Keep a sensible record limit.
+
+Add:
+- Personal best.
+- Recent records.
+- Difficulty filtering.
+- Chapter filtering.
+- Seed lookup.
+
+ACCESS:
+
+Place the Leaderboard inside the Play Selection
+or Wake Trials navigation.
+
+Do not add a new primary title-screen button.
+
+SECOND: GLOBAL LEADERBOARD SUPPORT
+
+Inspect whether a Firebase or other leaderboard backend
+is already configured.
+
+Do not assume credentials exist.
+
+If a valid Firebase project is available:
+
+Implement a proper optional global leaderboard
+through an appropriate backend/service architecture.
+
+Use:
+- Anonymous or suitable account authentication.
+- Server-side score submission validation.
+- Rate limiting.
+- Appropriate database security rules.
+- Safe public display names.
+- Abuse protection.
+
+Do not place secret credentials in client code.
+
+Do not trust arbitrary client-submitted completion
+times as verified global results.
+
+If an online backend is not configured:
+
+- Keep the local leaderboard fully functional.
+- Implement a clean provider interface.
+- Document the required Firebase/backend setup.
+- Show Global Leaderboard as unavailable or not configured.
+- Never fabricate rankings or player records.
+
+Clearly distinguish:
+
+LOCAL RECORDS
+
+GLOBAL LEADERBOARD
+
+They are not the same thing.
+
+============================================================
+14. PIP SPEECH BUBBLE — TRUE CHARACTER ANCHORING
+============================================================
+
+CURRENT USER COMPLAINT:
+
+Pip's dialogue bubble is not properly tracking or
+anchoring to the companion.
+
+The current DialogueManager calculates screen coordinates
+using Pip's position minus camera scroll.
+
+It then clamps those coordinates to fixed screen limits.
+
+React renders the bubble as a separate absolutely
+positioned HTML element.
+
+This can become detached from Pip when the game viewport,
+camera or display scaling changes.
+
+REPLACE THIS APPROACH.
+
+PREFERRED SOLUTION:
+
+Create a Phaser-native dialogue bubble attached to
+Pip's world position.
+
+The bubble should follow Pip automatically.
+
+Use world coordinates.
+
+Let the same Phaser camera transform and scale affect
+both Pip and its speech bubble.
+
+Do not independently hard-code camera scroll subtraction
+for a separate bubble that is expected to follow Pip.
+
+IMPLEMENT:
+
+- Phaser Container or equivalent anchored world object.
+- A defined offset above or beside Pip.
+- Smooth but responsive positioning.
+- Proper depth ordering.
+- Responsive width.
+- Text wrapping.
+- Dialogue fade-in and fade-out.
+- Skip or dismiss action.
+- Subtitle visibility setting.
+- Accessibility support.
+
+EDGE HANDLING:
+
+When Pip is near the screen edge:
+
+- Shift the bubble inward.
+- Flip its placement when necessary.
+- Prevent the bubble from leaving the viewport.
+- Avoid covering Nima.
+- Avoid covering hazards or important interactions.
+
+Do not allow edge-clamping to make the bubble visibly
+detach from Pip.
+
+The bubble should have a small visual tail or indicator
+that identifies Pip as the speaker.
+
+CAMERA:
+
+The bubble must remain anchored during:
+- Horizontal camera movement.
+- Vertical camera movement.
+- Camera smoothing.
+- Camera snaps.
+- Respawn.
+- Level transitions.
+- Different viewport scales.
+
+Test actual gameplay, not just a screenshot
+of a static bubble.
+
+PIP'S NARRATOR ROLE:
+
+Preserve all existing dialogue.
+
+Continue:
+- Story narration.
+- Contextual help.
+- Discovery reactions.
+- NPC-related observations.
+- Chapter dialogue.
+- Memory Echo dialogue.
+
+Keep dialogue natural and non-intrusive.
+
+============================================================
+15. DESKTOP MOUSE-DRIVEN 2.5D DEPTH PARALLAX
+============================================================
+
+NEW VISUAL FEATURE:
+
+Introduce an optional PC-only mouse-driven
+environmental parallax effect.
+
+When the user moves the mouse toward an area
+of the game viewport, background and foreground
+environmental layers should respond with subtle
+depth movement.
+
+The result should resemble a layered illustrated
+world with a 2.5D sense of depth.
+
+THIS IS NOT A ROTATION OF THE ENTIRE GAME SCREEN.
+
+Do not rotate or transform the entire browser canvas.
+
+Do not tilt Nima.
+
+Do not rotate gameplay physics.
+
+Do not move collision geometry.
+
+Do not change input coordinates.
+
+Only approved decorative environment layers should
+respond to mouse position.
+
+IMPLEMENT A DEDICATED SYSTEM:
+
+Suggested name:
+PointerDepthParallaxSystem.ts
+
+INPUT:
+
+Normalize mouse position relative to the game canvas center.
+
+Map horizontal and vertical position to normalized values.
+
+Use smoothed interpolation.
+
+Avoid sudden snapping.
+
+DEPTH RESPONSE:
+
+Far background:
+Very small movement.
+
+Distant environment:
+Small movement.
+
+Midground:
+Moderate movement.
+
+Near roots:
+Slightly greater movement.
+
+Foreground botanical elements:
+Largest but still restrained movement.
+
+Possible visual techniques:
+
+- Horizontal offsets.
+- Vertical offsets.
+- Small scale changes.
+- Extremely subtle rotation.
+- Layer-dependent easing.
+- Gentle perspective-like movement.
+
+ROTATION:
+
+If using rotation, keep it subtle.
+
+Do not rotate the entire camera or screen.
+
+Use rotation only on selected decorative layers
+where it improves the perceived depth.
+
+PERFORMANCE:
+
+- Use eased pointer input.
+- Avoid creating objects every frame.
+- Avoid expensive transforms.
+- Preserve normal camera parallax.
+- Do not apply transformations to gameplay objects.
+
+DESKTOP ONLY:
+
+Enable this effect only when an appropriate
+mouse or trackpad pointer is available.
+
+Disable it on touch-only phones and tablets.
+
+Do not let this effect interfere with:
+- Keyboard controls.
+- Mouse clicks.
+- Gameplay interaction.
+- Gamepad.
+- Touch input.
+
+ACCESSIBILITY:
+
+Integrate with the existing reduced-motion setting.
+
+Provide a setting to disable mouse depth parallax.
+
+When the pointer leaves the game viewport:
+Smoothly return the environment to its neutral position.
+
+When the game loses focus:
+Reset pointer offsets.
+
+When the game is paused:
+Do not keep unnecessary animation active.
+
+TARGET APPEARANCE:
+
+The environment should feel like a layered illustration
+that responds to the viewer's position.
+
+It should feel subtly three-dimensional.
+
+Avoid strong screen tilting or motion-sickness effects.
+
+============================================================
+16. CREDITS — FULL WIS PWAKE WORLD ARTWORK
+============================================================
+
+CURRENT PROBLEM:
+
+The Credits modal uses:
+
+ref_nima_pip_concept_1793515706089.jpg
+
+This is a character-design sheet.
+
+It contains character profiles, annotations,
+colors and individual poses.
+
+It is useful as an internal production reference.
+
+It is NOT the correct image to represent
+the complete game.
+
+REPLACE IT.
+
+NEW CREDITS ARTWORK:
+
+Create a full 16:9 Wispwake world illustration.
+
+The image should represent the complete artistic
+identity of Wispwake.
+
+VISUAL COMPOSITION:
+
+- Vast ancient Veilgrove.
+- Enormous ancient trees.
+- Multiple layers of vegetation.
+- Deep atmospheric perspective.
+- Glowing magical plants.
+- A mysterious twilight sky.
+- Beautiful environmental lighting.
+- Nima integrated naturally into the world.
+- Pip accompanying Nima.
+- A rich scene that communicates exploration
+  and the fantasy adventure.
+
+Nima and Pip should be part of the environment.
+
+They should NOT be presented as a character-design sheet.
+
+Do not include:
+- Model sheets.
+- Character annotations.
+- Callout labels.
+- Character profile headings.
+- Multiple isolated Nima poses.
+- UI mockups.
+- Watermarks.
+- Random text inside the image.
+
+Use the available Google AI Studio development
+image-generation capability.
+
+This image is an approved development asset.
+
+It must be exported into the repository and loaded
+locally by the game.
+
+Do not introduce runtime image generation.
+
+Credits page:
+
+Keep the title:
+ABOUT WISPWAKE.
+
+Include:
+- Full-game world artwork.
+- Short game-world description.
+- Short story premise.
+- Nima and Pip introduction.
+- Clickable GitHub repository link.
+
+GitHub:
+https://github.com/rawsushies/wispwake
+
+Keep the link clickable and open it in a new tab.
+
+The image should visually communicate the entire
+game world rather than one character concept.
+
+Update:
+- Credits modal.
+- ASSET_MANIFEST.md.
+- README gallery.
+- docs/screenshots/about-wispwake.webp.
+
+Use actual in-game screenshots where appropriate.
+
+============================================================
+17. STORY AND NARRATIVE EXPANSION
+============================================================
+
+Preserve the original story.
+
+The first four chapters establish the first major arc.
+
+CHAPTERS 01–04:
+
+Keep their existing story.
+
+Do not remove:
+- The Stillness.
+- The First Bloom.
+- The Moonlit Marsh memories.
+- The Hollow Below revelation.
+- Pip's connection to the First Bloom.
+- The Windward Ruins climax.
+
+Continue the story into Chapters 05 and 06.
+
+CHAPTER 05 — THE SHATTERED CHOIR
+
+The ancient Veilgrove once carried its memories through
+a network of resonance structures.
+
+The Choir has fallen silent.
+
+The Bellkeeper and other inhabitants remember
+different fragments of its former purpose.
+
+Nima and Pip must reconnect the scattered resonance paths.
+
+Pip discovers that its memories are connected
+to the original song of the Veilgrove.
+
+CHAPTER 06 — THE HEART OF THE VEIL
+
+Nima and Pip finally reach the damaged central heart.
+
+The truth about the Stillness becomes clear.
+
+It was a protective system created to contain
+a spreading wound.
+
+The player must reconnect the damaged network
+and restore the Veilgrove's central rhythm.
+
+The ending should:
+- Resolve the expanded campaign.
+- Give Nima and Pip a meaningful emotional moment.
+- Restore the environment.
+- Show the effect of the player's entire journey.
+- Leave room for future adventures without making
+  the campaign feel unfinished.
+
+NARRATIVE DELIVERY:
+
+Use:
+- Pip dialogue.
+- NPC conversations.
+- Story Journal entries.
+- Environmental memories.
+- Landmarks.
+- Cinematic transitions.
+- Optional discoveries.
+
+Avoid exposition dumps.
+
+Use accessible everyday English.
+
+Make the dialogue emotional and understandable.
+
+============================================================
+18. SAVE DATA AND CAMPAIGN MIGRATION
+============================================================
+
+CRITICAL:
+
+The current SaveManager uses schema version 2.
+
+The current chapter union and save order contain
+only four chapters.
+
+Adding Chapters 05 and 06 requires a proper migration.
+
+Implement a new save schema version.
+
+Preserve:
+- Existing Chapter 01 progress.
+- Existing Chapter 02 progress.
+- Existing Chapter 03 progress.
+- Existing Chapter 04 progress.
+- Existing checkpoints.
+- Existing permanent root bridges.
+- Existing dialogue history.
+- Existing Memory Echo discoveries.
+- Existing settings.
+- Existing Wake Trials records.
+- Existing Story Difficulty.
+
+New chapters must be added with correct default
+unlock behavior.
+
+Do not reset old progress.
+
+Preserve backwards compatibility.
+
+Implement a safe migration from schema V2.
+
+Validate missing or malformed fields.
+
+Persist:
+- Journal entries.
+- NPC interaction states.
+- Optional quests.
+- Local leaderboard records.
+- New chapter progression.
+- New discoveries.
+- Dialogue seen states.
+
+Do not expose another player's private save data.
+
+============================================================
+19. ASSET PRODUCTION AND ORIGINAL ARTWORK
+============================================================
+
+Use Google AI Studio as the development workspace.
+
+The released game must not contain AI generation controls.
+
+Generate original artwork where needed.
+
+PRIORITIES:
+
+A. Nima's correct running animation.
+
+B. New friendly NPC character designs.
+
+C. Three or more hostile creature designs.
+
+D. Chapter 05 environment and landmarks.
+
+E. Chapter 06 environment and landmarks.
+
+F. Enemy animation frames.
+
+G. NPC animation frames.
+
+H. Story Journal illustrations.
+
+I. Full Wispwake Credits key art.
+
+Use the established Wispwake visual language.
+
+Maintain:
+- Hand-painted quality.
+- Consistent light direction.
+- Consistent material appearance.
+- Atmospheric depth.
+- Original character identities.
+- Organic environmental silhouettes.
+
+Do not use random online artwork with unknown licences.
+
+Do not copy existing game characters.
+
+Do not use character sheets as finished game scenes.
+
+Export approved artwork into the repository.
+
+Keep separate asset files for gameplay layers.
+
+Do not flatten entire levels into one image.
+
+Update ASSET_MANIFEST.md.
+
+Track status honestly:
+
+PLANNED
+GENERATED
+INTEGRATED
+RUNTIME TESTED
+APPROVED
+
+Do not mark an animation APPROVED until it has been
+tested inside the running game.
+
+============================================================
+20. TECHNICAL ARCHITECTURE
+============================================================
+
+Maintain the current stack:
+
+React.
+TypeScript.
+Vite.
+Phaser 3.
+Arcade Physics.
+
+Do not put every new system inside GameplayScene.ts.
+
+Suggested architecture:
+
+src/game/
+  entities/
+    player/
+    companion/
+    creatures/
+      drifter/
+      friendly/
+      hostile/
+
+  systems/
+    CharacterArtManager.ts
+    NPCManager.ts
+    EnemyManager.ts
+    EnemyAIController.ts
+    StoryJournalManager.ts
+    LeaderboardManager.ts
+    LeaderboardProvider.ts
+    DialogueManager.ts
+    PointerDepthParallaxSystem.ts
+    CheckpointManager.ts
+    LevelRegistry.ts
+    SaveManager.ts
+
+  levels/
+    sleepingCanopy/
+    moonlitMarsh/
+    hollowBelow/
+    windwardRuins/
+    shatteredChoir/
+    heartOfVeil/
+
+  dialogue/
+    prologue/
+    sleepingCanopy/
+    moonlitMarsh/
+    hollowBelow/
+    windwardRuins/
+    shatteredChoir/
+    heartOfVeil/
+
+  journal/
+    entries/
+    characters/
+    locations/
+    memories/
+
+  npcs/
+    definitions/
+    dialogue/
+    quests/
+
+  enemies/
+    definitions/
+    behaviors/
+    trajectories/
+
+These are suggested organizational boundaries.
+
+Reuse existing equivalent systems.
+
+Do not create duplicate managers unnecessarily.
+
+Keep:
+- Rendering.
+- Physics.
+- Input.
+- NPC behavior.
+- Enemy behavior.
+- Journal.
+- Leaderboard.
+- Dialogue.
+- Level progression.
+- Save data.
+
+separate and maintainable.
+
+============================================================
+21. PRESERVE GAMEPLAY AND VISUAL REQUIREMENTS
+============================================================
+
+Preserve the existing playable foundation.
+
+NIMA:
+
+Responsive run.
+Jump.
+Variable-height jump.
+Air movement.
+Landing.
+Wake casting.
+Correct original clothing.
+
+PIP:
+
+Approved animation.
+Following.
+Curiosity.
+Wake reaction.
+Helper behavior.
+Narration.
+Properly anchored speech bubble.
+
+WAKE:
+
+Functional environmental activation.
+Circular pulse.
+No rectangular glow.
+Correct cooldown.
+Environmental response.
+
+TERRAIN:
+
+Organic silhouettes.
+Separate collision geometry.
+Decorative roots.
+Moss.
+Vegetation.
+Multiple visual variations.
+
+ENVIRONMENT:
+
+Six layered environment systems.
+Birds.
+Flying creatures.
+Fog.
+Vines.
+Upper canopy.
+Foreground vegetation.
+Atmospheric light.
+
+LIGHTING:
+
+Dynamic local illumination.
+Projected shadows.
+Volumetric-style rays.
+Controlled lens effects.
+Biome lighting.
+Quality settings.
+
+CAMPAIGN:
+
+Six complete chapters.
+
+DIFFICULTY:
+
+Easy.
+Medium.
+Hard.
+Extreme.
+
+WAKE TRIALS:
+
+Preserve deterministic generation.
+
+Preserve the existing segment archetypes.
+
+Preserve traversal validation.
+
+Do not allow generated impossible routes.
+
+MOBILE:
+
+Landscape-first.
+Touch buttons.
+Gamepad support.
+Responsive interface.
+Reduced rendering quality when needed.
+
+OPEN SOURCE:
+
+Preserve public README, documentation,
+licensing and contribution workflow.
+
+Do not introduce a runtime Gemini API requirement.
+
+Do not add an in-game Art Forger.
+
+============================================================
+22. IMPLEMENTATION ORDER
+============================================================
+
+This is a substantial milestone.
+
+Execute in the following sequence.
+
+STAGE A — REPOSITORY BASELINE
+
+- Inspect latest repository.
+- Preserve the current project.
+- Identify existing implementations.
+- Create a recoverable checkpoint.
+- Identify regression risks.
+
+STAGE B — CRITICAL CHARACTER AND PHYSICS FIXES
+
+- Correct Nima's trouser rendering.
+- Improve Nima animation.
+- Fix Drifter collision.
+- Fix Drifter passenger carrying.
+- Re-test checkpoint respawning.
+- Re-test circular Wake effects.
+
+Do not move on while critical gameplay defects
+are silently ignored.
+
+STAGE C — PIP DIALOGUE AND CHARACTER PRESENTATION
+
+- Move speech bubble into world space.
+- Anchor to Pip.
+- Add edge handling.
+- Preserve subtitle settings.
+- Test with moving camera.
+
+STAGE D — SIX-CHAPTER CAMPAIGN
+
+- Preserve first four chapters.
+- Add Shattered Choir.
+- Add Heart of the Veil.
+- Add chapter progression.
+- Add full level geometry.
+- Add meaningful story events.
+- Add checkpoints.
+- Add new environment artwork.
+
+STAGE E — NPC AND HOSTILE CREATURE SYSTEMS
+
+- Implement NPC architecture.
+- Generate NPC artwork.
+- Add interactions.
+- Implement hostile entities.
+- Add deterministic parametric movement.
+- Add attack telegraphs.
+- Integrate Wake interactions.
+- Test gameplay fairness.
+
+STAGE F — STORY JOURNAL AND LEADERBOARD
+
+- Implement journal.
+- Integrate Memory Echoes.
+- Integrate NPC discoveries.
+- Implement local leaderboard.
+- Implement provider architecture.
+- Integrate online ranking only when properly configured.
+
+STAGE G — DESKTOP DEPTH PARALLAX
+
+- Track mouse position.
+- Calculate depth-based offsets.
+- Animate background and foreground independently.
+- Add settings.
+- Add reduced-motion handling.
+- Disable on touch devices.
+
+STAGE H — CREDITS ARTWORK
+
+- Create full Wispwake key art.
+- Export artwork.
+- Replace Nima character sheet.
+- Update Credits.
+- Update screenshots.
+- Update repository documentation.
+
+STAGE I — SAVE MIGRATION AND RELEASE CLEANUP
+
+- Upgrade SaveManager schema.
+- Preserve previous player data.
+- Update metadata and asset manifest.
+- Update README.
+- Update changelog.
+
+STAGE J — QUALITY ASSURANCE
+
+- TypeScript.
+- Production build.
+- Automated tests.
+- Physics tests.
+- NPC and enemy tests.
+- Chapter tests.
+- Journal persistence.
+- Leaderboard.
+- Mouse parallax.
+- Mobile.
+- Actual browser playtesting.
+
+Do not stop after producing an implementation plan.
+
+Implement the milestone in the connected repository.
+
+If a particular external service is unavailable,
+complete the usable local implementation and document
+the remaining external configuration honestly.
+
+============================================================
+23. REQUIRED AUTOMATED TESTS
+============================================================
+
+CHARACTER:
+
+- No extra trouser layer.
+- Original clothing silhouette retained.
+- No duplicated limbs.
+- Correct frame alignment.
+- Consistent character appearance.
+
+DRIFTER:
+
+- Body and sprite positions synchronized.
+- Landing detected.
+- Grounded state correct.
+- Passenger carry works in X and Y.
+- Natural jump off.
+- Underside passage.
+- No jitter.
+- No falling through.
+
+CHECKPOINT:
+
+- Safe spawn.
+- Multiple deaths.
+- Physics reset.
+- Persistence.
+- Correct camera and Pip position.
+
+WAKE:
+
+- Circular radial effect.
+- No rectangular edges.
+- Correct activation.
+- Correct cooldown.
+- Correct object interactions.
+
+PIP:
+
+- Bubble anchored in world space.
+- Follows Pip.
+- Camera movement.
+- Edge handling.
+- Skip.
+- Subtitles.
+
+CAMPAIGN:
+
+- Six chapters registered.
+- Six levels load.
+- Chapter unlocking works.
+- Save migration works.
+- Six chapter environments exist.
+- All chapters are traversable.
+- Difficulty applies to all chapters.
+
+NPC:
+
+- Dialogue triggers.
+- Interaction.
+- Save state.
+- Journal unlocks.
+- Proper friendly behavior.
+
+HOSTILE CREATURES:
+
+- Parametric patrol.
+- Detection.
+- Telegraph.
+- Attack.
+- Recovery.
+- Wake response.
+- Collision.
+- Respawn behavior.
+
+JOURNAL:
+
+- Memory Echo entries.
+- NPC entries.
+- Chapter entries.
+- Read/unread states.
+- Save persistence.
+- Locked-entry privacy.
+
+LEADERBOARD:
+
+- Valid completion record.
+- Sorting.
+- Tie-breaking.
+- Persistent local records.
+- Difficulty filters.
+- No fabricated online data.
+
+PARALLAX:
+
+- Mouse input.
+- Depth offsets.
+- Smooth return to neutral.
+- Touch disabled.
+- Reduced motion.
+- No collision changes.
+
+CREDITS:
+
+- Full game image loaded.
+- No character-design sheet.
+- GitHub link functional.
+
+============================================================
+24. ACTUAL BROWSER VERIFICATION
+============================================================
+
+Test the real running game.
+
+Do not rely only on unit tests.
+
+CAPTURE:
+
+1. Nima running with corrected trousers.
+2. Nima jumping and landing.
+3. Nima's original clothing appearance.
+4. Nima landing on a Drifter.
+5. Nima riding a moving Drifter.
+6. Pip's bubble while the camera follows.
+7. Story Journal.
+8. NPC interaction.
+9. Hostile creature patrol.
+10. Hostile creature attack telegraph.
+11. Hostile creature responding to Wake.
+12. Chapter 05 environment.
+13. Chapter 06 environment.
+14. Leaderboard.
+15. Desktop mouse parallax.
+16. Mobile controls.
+17. Full-game Credits artwork.
+
+TEST:
+
+- Complete every new chapter.
+- Test every new creature.
+- Test all difficulty levels.
+- Test multiple checkpoint deaths.
+- Test old save migration.
+- Test local leaderboard persistence.
+- Test mouse parallax on desktop.
+- Verify it does not run on mobile.
+
+Do not use standalone concept art as evidence of
+functional game implementation.
+
+Do not claim browser verification if only a build
+or static source inspection was performed.
+
+============================================================
+25. DOCUMENTATION AND GITHUB
+============================================================
+
+Update:
+
+README.md
+CONTRIBUTING.md
+ASSET_MANIFEST.md
+ASSET_LICENSE.md
+CHANGELOG.md
+docs/ROADMAP.md
+docs/ARCHITECTURE.md
+
+README must represent the actual six-chapter game.
+
+Include actual screenshots of:
+- Six environments.
+- Nima.
+- Pip.
+- NPCs.
+- Hostile creatures.
+- Story Journal.
+- Leaderboard.
+- Mouse parallax.
+- Actual gameplay.
+
+Do not use unimplemented art.
+
+Update asset provenance and licence records.
+
+Keep the original artwork and source-code licence
+boundaries separate.
+
+Do not commit secrets or backend credentials.
+
+============================================================
+26. REQUIRED FINAL REPORT
+============================================================
+
+Report the following:
+
+A. CHARACTER
+
+- Why the extra trouser rendering appeared.
+- What was changed.
+- How the canonical outfit was preserved.
+- Animation verification results.
+
+B. DRIFTER
+
+- Why Nima previously fell through.
+- Physics-body configuration.
+- Collision strategy.
+- Landing results.
+- Passenger-carry results.
+
+C. CAMPAIGN
+
+- Six chapter definitions.
+- New levels.
+- New sub-areas.
+- Platform counts.
+- New environmental mechanics.
+- Story development.
+- Completion testing.
+
+D. NPC AND ENEMIES
+
+- New NPCs.
+- Character assets.
+- Dialogue.
+- Hostile creature archetypes.
+- Parametric movement patterns.
+- Wake interactions.
+
+E. JOURNAL AND LEADERBOARD
+
+- Journal functionality.
+- Save migration.
+- Local records.
+- Global backend configuration, if available.
+
+F. PIP
+
+- Bubble positioning architecture.
+- Camera tracking.
+- Edge behavior.
+
+G. DESKTOP PARALLAX
+
+- Depth layer behavior.
+- Mouse response.
+- Performance.
+- Accessibility.
+
+H. CREDITS
+
+- New full-game key artwork.
+- Asset path.
+- Actual modal screenshot.
+
+I. TECHNICAL VERIFICATION
+
+- TypeScript.
+- Production build.
+- Automated tests.
+- Browser tests.
+- Performance.
+- Remaining defects.
+
+Do not claim all features are complete if some are
+only planned or partially implemented.
+
+============================================================
+FINAL CREATIVE DIRECTIVE
+============================================================
+
+Wispwake should feel like a world inhabited by
+real characters and living creatures.
+
+Nima must look like the original illustrated character,
+not an altered costume produced by an animation workaround.
+
+Pip must feel like a real companion.
+
+The Drifters must be physically reliable.
+
+NPCs should make the world feel inhabited.
+
+Hostile creatures should create genuine gameplay challenges.
+
+The Story Journal should give meaning to discoveries.
+
+The Leaderboard should reward actual player skill.
+
+The mouse-driven depth effect should make the artwork
+feel like a layered world.
+
+The Credits artwork should represent the entire game.
+
+The campaign should now contain six complete adventures.
+
+Keep the original Veilgrove identity.
+
+Keep gameplay reliable.
+
+Do not add superficial features merely to increase
+the number of systems.
+
+Every new feature must be genuinely playable.
+
+Every previous bug must remain a regression requirement
+until verified.
+
+QUALITY OF EXECUTION TAKES PRIORITY OVER FEATURE COUNT.
+
+BUILD A WORLD THAT FEELS ALIVE.
+BUILD CHARACTERS PLAYERS CARE ABOUT.
+BUILD A GAME WORTH EXPLORING.

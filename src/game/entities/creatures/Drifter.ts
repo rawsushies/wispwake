@@ -1,19 +1,20 @@
 import Phaser from 'phaser';
-import { WakeInteractable } from '../../systems/WakeSystem';
 import { VEILGROVE_HEX } from '../../config/palette';
 import { Player } from '../player/Player';
+import { AudioManager } from '../../systems/AudioManager';
+import { WakeInteractable } from '../../systems/WakeSystem';
 
 /**
- * Drifter Creature (Milestone 5 Single-Authority Kinematic Moving Platform — Section 04):
- *
- * Fixes the Milestone 4 dual-authority jitter/desynchronization bug:
- * - Uses `this.body.moves = false` and `this.body.setImmovable(true)` so Phaser Arcade Physics
- *   NEVER integrates `body.velocity` a second time on top of `sprite.setPosition`.
- * - Single movement authority: deterministic cosine ping-pong patrol (`nextX`, `nextY`) followed
- *   by `this.body.updateFromGameObject()`.
- * - Carries Nima smoothly in BOTH X (`deltaX`) and Y (`deltaY`) whenever she is standing on the
- *   Drifter's mossy bell top, keeping her grounded during both upward and downward movement while
- *   allowing natural walking and jumping off at any moment.
+ * Gentle Canopy Drifter (Milestone 6 Priority 2 Update — Robust One-Way Collision & Carrying):
+ * - Bioluminescent floating forest organism that glides smoothly along a deterministic path.
+ * - Top surface acts as a reliable one-way walkable mossy bell (`116x22`, offset `(22, 22)` inside `160x104` sprite).
+ * - Fixes the bug where Nima could fall through the Drifter:
+ *   1. Explicitly syncs `body.prev` and `body.position` every frame so Phaser's `separateY`
+ *      always sees accurate frame-to-frame platform delta.
+ *   2. Performs a swept vertical landing and continuous top-surface carrying check so Nima
+ *      can land on the Drifter from any jump/fall height, remain grounded for 10+ seconds
+ *      across horizontal/vertical motion and reversals, walk left/right across the bell,
+ *      jump off cleanly, and jump upward through the underside without snagging.
  */
 export class Drifter implements WakeInteractable {
   public readonly id: string;
@@ -21,14 +22,19 @@ export class Drifter implements WakeInteractable {
   public readonly body: Phaser.Physics.Arcade.Body;
   private readonly scene: Phaser.Scene;
 
-  public readonly startX: number;
-  public readonly startY: number;
-  public readonly endX: number;
-  public readonly endY: number;
-  public readonly cycleDuration: number;
+  private readonly startX: number;
+  private readonly startY: number;
+  private readonly endX: number;
+  private readonly endY: number;
+  private readonly cycleDuration: number;
 
   private elapsed = 0;
-  private harmonizeTimer = 0;
+  private resonateTimer = 0;
+  private bracketGraphics: Phaser.GameObjects.Graphics;
+
+  public prevX: number;
+  public prevY: number;
+  public prevSurfaceTopY: number;
   public deltaX = 0;
   public deltaY = 0;
 
@@ -39,7 +45,7 @@ export class Drifter implements WakeInteractable {
     startY: number,
     endX: number,
     endY: number,
-    cycleDuration = 6.5
+    cycleDuration = 6.0
   ) {
     this.scene = scene;
     this.id = id;
@@ -48,25 +54,32 @@ export class Drifter implements WakeInteractable {
     this.endX = endX;
     this.endY = endY;
     this.cycleDuration = cycleDuration;
+    this.prevX = startX;
+    this.prevY = startY;
 
     this.registerAnimations(scene);
 
     this.sprite = scene.physics.add.sprite(startX, startY, 'drifter_sheet', 0);
-    this.sprite.setDepth(16);
+    this.sprite.setDepth(14);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
+
     this.body.setAllowGravity(false);
     this.body.setImmovable(true);
-    // CRITICAL FIX: Disable Arcade Physics velocity integration so position is controlled
-    // strictly by one authority (`Drifter.update`), eliminating double-movement and jitter.
     this.body.moves = false;
 
-    // Walkable bell top collision box (116x22 aligned with the mossy crown rim)
+    // Top mossy bell surface: 116px wide, 22px tall, top at sprite.y - 30
     this.body.setSize(116, 22);
-    this.body.setOffset((160 - 116) * 0.5, 22);
-    // One-way platform from top so Nima can jump up through the underside cleanly
+    this.body.setOffset(22, 22);
+    this.body.checkCollision.up = true;
     this.body.checkCollision.down = false;
     this.body.checkCollision.left = false;
     this.body.checkCollision.right = false;
+    this.body.updateFromGameObject();
+    this.body.prev.copy(this.body.position);
+    this.prevSurfaceTopY = this.body.top;
+
+    this.bracketGraphics = scene.add.graphics();
+    this.bracketGraphics.setDepth(24);
 
     this.sprite.play('drifter_glide');
   }
@@ -82,7 +95,7 @@ export class Drifter implements WakeInteractable {
     });
 
     scene.anims.create({
-      key: 'drifter_harmonize',
+      key: 'drifter_resonate',
       frames: scene.anims.generateFrameNumbers('drifter_sheet', { start: 8, end: 11 }),
       frameRate: 10,
       repeat: -1,
@@ -98,80 +111,107 @@ export class Drifter implements WakeInteractable {
   }
 
   public isDormantForHint(): boolean {
-    return false;
+    return this.resonateTimer <= 0;
   }
 
-  public setProximityHighlight(inRange: boolean): void {
-    if (this.harmonizeTimer <= 0) {
-      this.sprite.setTint(inRange ? VEILGROVE_HEX.wakeMint : 0xffffff);
+  public setProximityHighlight(inRange: boolean, highContrast = false): void {
+    this.bracketGraphics.clear();
+    if (!inRange) {
+      this.sprite.clearTint();
+      return;
+    }
+
+    this.sprite.setTint(0xd8fff0);
+    if (highContrast) {
+      this.bracketGraphics.lineStyle(2, VEILGROVE_HEX.sapGold, 0.9);
+      this.bracketGraphics.strokeRoundedRect(this.sprite.x - 62, this.sprite.y - 34, 124, 34, 8);
     }
   }
 
   public onWakeActivated(): boolean {
-    this.harmonizeTimer = 2.6;
-    this.sprite.setTint(0xffffff);
-    this.sprite.play('drifter_harmonize', true);
+    this.resonateTimer = 4.5;
+    this.sprite.play('drifter_resonate', true);
+    AudioManager.playBloomOpen();
     return true;
   }
 
   public resetDeterministic(): void {
     this.elapsed = 0;
-    this.harmonizeTimer = 0;
+    this.resonateTimer = 0;
+    this.prevX = this.startX;
+    this.prevY = this.startY;
     this.deltaX = 0;
     this.deltaY = 0;
     this.sprite.setPosition(this.startX, this.startY);
-    this.body.setVelocity(0, 0);
     this.body.updateFromGameObject();
+    this.body.prev.copy(this.body.position);
+    this.prevSurfaceTopY = this.body.top;
     this.sprite.play('drifter_glide', true);
   }
 
-  /**
-   * Checks whether Nima is currently standing on top of this Drifter's bell surface.
-   */
-  public isPlayerStandingOnTop(player: Player): boolean {
-    if (player.isJumping && player.body.velocity.y < -40) {
-      return false;
-    }
-    const pBody = player.body;
-    const dBody = this.body;
-    const horizOverlap = pBody.right > dBody.left + 4 && pBody.left < dBody.right - 4;
-    const vertDist = Math.abs(pBody.bottom - dBody.top);
-    return horizOverlap && vertDist <= 8 && pBody.velocity.y >= -15;
-  }
-
-  /**
-   * Single-authority kinematic update + synchronized 2D passenger carrying.
-   */
   public update(dt: number, player?: Player): void {
-    const prevX = this.sprite.x;
-    const prevY = this.sprite.y;
+    const speedMultiplier = this.resonateTimer > 0 ? 0.55 : 1.0;
 
-    const wasPassengerOnTop = player ? this.isPlayerStandingOnTop(player) : false;
-
-    if (this.harmonizeTimer > 0) {
-      this.harmonizeTimer -= dt;
-      this.elapsed += dt * 0.38;
-      if (this.harmonizeTimer <= 0) {
+    if (this.resonateTimer > 0) {
+      this.resonateTimer -= dt;
+      if (this.resonateTimer <= 0) {
         this.sprite.play('drifter_glide', true);
       }
-    } else {
-      this.elapsed += dt;
     }
 
-    const phase = (this.elapsed / this.cycleDuration) * Math.PI * 2;
-    const t = (1 - Math.cos(phase)) * 0.5;
-    const nextX = Phaser.Math.Linear(this.startX, this.endX, t);
-    const nextY = Phaser.Math.Linear(this.startY, this.endY, t) + Math.sin(this.elapsed * 2.2) * 5;
+    this.prevX = this.sprite.x;
+    this.prevY = this.sprite.y;
+    this.prevSurfaceTopY = this.body.top;
 
-    this.deltaX = nextX - prevX;
-    this.deltaY = nextY - prevY;
+    this.elapsed += dt * speedMultiplier;
+    const t = (1 - Math.cos((this.elapsed / this.cycleDuration) * Math.PI * 2)) * 0.5;
+
+    const nextX = Phaser.Math.Linear(this.startX, this.endX, t);
+    const nextY =
+      Phaser.Math.Linear(this.startY, this.endY, t) + Math.sin(this.elapsed * 2.2) * 3.5;
+
+    this.deltaX = nextX - this.prevX;
+    this.deltaY = nextY - this.prevY;
+
+    // Preserve previous body coordinates so Phaser Arcade Physics separateY knows exact delta
+    const oldBodyX = this.body.x;
+    const oldBodyY = this.body.y;
 
     this.sprite.setPosition(nextX, nextY);
     this.body.updateFromGameObject();
+    this.body.prev.set(oldBodyX, oldBodyY);
+    this.body.prevFrame.set(oldBodyX, oldBodyY);
 
-    // If Nima was standing on top of this Drifter, carry her cleanly in both X and Y
-    if (player && wasPassengerOnTop) {
-      player.carryOnMovingSurface(this.deltaX, this.body.top);
+    // Swept one-way landing & continuous passenger carrying
+    if (player && !player.isRespawnProtected()) {
+      const pBody = player.body;
+      const surfaceLeft = this.body.left;
+      const surfaceRight = this.body.right;
+      const surfaceTopY = this.body.top;
+
+      const horizontalOverlap =
+        pBody.right > surfaceLeft + 3 && pBody.left < surfaceRight - 3;
+
+      if (horizontalOverlap && pBody.velocity.y >= -25) {
+        const footDeltaFromTop = pBody.bottom - surfaceTopY;
+        const prevFootDeltaFromPrevTop = player.prevBottom - this.prevSurfaceTopY;
+
+        // Catch both:
+        // 1) Nima already standing/riding on the top surface (within [-8, +16] px of surfaceTopY)
+        // 2) Nima falling across the top surface between frames (swept check)
+        const isAlreadyRiding =
+          player.ridingMovingSurface && Math.abs(footDeltaFromTop) <= 18;
+        const isStandingClose =
+          footDeltaFromTop >= -8 && footDeltaFromTop <= 16;
+        const crossedTopWhileFalling =
+          prevFootDeltaFromPrevTop <= 14 &&
+          footDeltaFromTop >= -6 &&
+          footDeltaFromTop <= 28;
+
+        if (isAlreadyRiding || isStandingClose || crossedTopWhileFalling) {
+          player.carryOnMovingSurface(this.deltaX, surfaceTopY);
+        }
+      }
     }
   }
 }

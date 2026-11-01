@@ -15,14 +15,14 @@ export interface DialogueEntry {
     | 'hazard_warning'
     | 'chapter_restored';
   text: string;
-  priority: number;       // 1 = ambient hint, 2 = story observation, 3 = key milestone/memory
+  priority: number;
   durationSec: number;
   oncePerSave: boolean;
+  journalEntryId?: string;
 }
 
 /**
- * Authored Dialogue, World Lore, and Companion Guidance for Pip (Milestone 5 — Sections 07 & 17).
- * Uses clear, warm, accessible everyday English with zero technical or developer jargon.
+ * Authored Dialogue, World Lore, and Companion Guidance for Pip across all 6 Campaign Chapters.
  */
 export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
   // =========================================================================
@@ -38,6 +38,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 5.6,
     oncePerSave: true,
+    journalEntryId: 'story_ch01_awakening',
   },
   {
     id: 'sc_02_dormant_garden',
@@ -76,9 +77,9 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     id: 'sc_03_first_cairn',
     chapterId: 'sleeping_canopy',
     triggerType: 'zone_x',
-    minX: 2780,
+    minX: 2740,
     maxX: 3060,
-    text: "A Resonance Cairn! Whenever we kindle one of these lanterns, the forest remembers our footsteps.",
+    text: 'Oakhaven the Last Gardener is waiting beside the Resonance Cairn! Press F near him to speak.',
     priority: 2,
     durationSec: 5.0,
     oncePerSave: true,
@@ -174,6 +175,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 5.4,
     oncePerSave: true,
+    journalEntryId: 'story_ch02_marsh',
   },
   {
     id: 'mm_02_sunken_blossoms',
@@ -203,7 +205,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     triggerType: 'zone_x',
     minX: 3420,
     maxX: 3780,
-    text: 'The Tide-Watchers built these arches to channel sap-light from the roots down into the wetlands.',
+    text: 'Look, Mirel the Tide-Watcher is keeping vigil beside the Drowned Archway! Press F to hear her counsel.',
     priority: 2,
     durationSec: 5.2,
     oncePerSave: true,
@@ -277,6 +279,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 5.4,
     oncePerSave: true,
+    journalEntryId: 'story_ch03_hollow',
   },
   {
     id: 'hb_02_spore_shaft',
@@ -369,6 +372,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 5.6,
     oncePerSave: true,
+    journalEntryId: 'story_ch04_ruins',
   },
   {
     id: 'wr_03_updraft_gallery',
@@ -431,14 +435,145 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     triggerType: 'zone_x',
     minX: 11960,
     maxX: 12520,
-    text: 'The Great Crown Bloom! Pulse your seed one more time, Nima—let’s wake the entire Veilgrove together!',
+    text: 'Awaken the Crown Bloom, Nima—its resonance will open the sky-bridges to the Shattered Choir!',
     priority: 3,
-    durationSec: 6.2,
+    durationSec: 6.0,
     oncePerSave: true,
   },
 
   // =========================================================================
-  // OPTIONAL MEMORY ECHOES (8 Secret Lore Shrines across Chapters 01–04)
+  // CHAPTER 05 — THE SHATTERED CHOIR (10 Sub-Areas, x: 0 .. 13,000)
+  // =========================================================================
+  {
+    id: 'sc5_01_silent_nave',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 60,
+    maxX: 520,
+    text: 'The Shattered Choir... these suspended stone belfries once harmonized every root and bough in the Veilgrove.',
+    priority: 3,
+    durationSec: 5.8,
+    oncePerSave: true,
+    journalEntryId: 'story_ch05_choir',
+  },
+  {
+    id: 'sc5_02_first_bell',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 1220,
+    maxX: 1620,
+    text: 'Look at that bronze Resonance Bell! Release a Wake pulse beside it—its harmonic chime will awaken the distant choir buds!',
+    priority: 3,
+    durationSec: 5.8,
+    oncePerSave: true,
+  },
+  {
+    id: 'sc5_03_bellkeeper',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 3080,
+    maxX: 3480,
+    text: 'Lyra the Bellkeeper is tending the first belfry lantern! Press F near her to learn the Choir’s three-chord harmony.',
+    priority: 2,
+    durationSec: 5.4,
+    oncePerSave: true,
+  },
+  {
+    id: 'sc5_05_drifter_arches',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 4820,
+    maxX: 5240,
+    text: 'Twin Choir Drifters glide between the hanging arches. Watch for the Gloom Moth patrolling above the mid-isle!',
+    priority: 2,
+    durationSec: 5.4,
+    oncePerSave: true,
+  },
+  {
+    id: 'sc5_07_sentinel_court',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 7780,
+    maxX: 8220,
+    text: 'A Rootbound Sentinel guards the Choir Bridge! Jump over its ground shockwave, or pulse Wake to calm its rune.',
+    priority: 3,
+    durationSec: 5.6,
+    oncePerSave: true,
+  },
+  {
+    id: 'sc5_10_grand_carillon',
+    chapterId: 'shattered_choir',
+    triggerType: 'zone_x',
+    minX: 12050,
+    maxX: 12650,
+    text: 'The Grand Choir Bloom! Wake it, Nima—let the great bells ring open the sealed gate to the Heart of the Veil!',
+    priority: 3,
+    durationSec: 6.0,
+    oncePerSave: true,
+  },
+
+  // =========================================================================
+  // CHAPTER 06 — THE HEART OF THE VEIL (10 Sub-Areas, x: 0 .. 13,400)
+  // =========================================================================
+  {
+    id: 'hv6_01_threshold',
+    chapterId: 'heart_of_veil',
+    triggerType: 'zone_x',
+    minX: 60,
+    maxX: 520,
+    text: 'We have reached the Heart of the Veil, Nima... where every golden sap-river and memory of the world-tree converges.',
+    priority: 3,
+    durationSec: 6.0,
+    oncePerSave: true,
+    journalEntryId: 'story_ch06_heart',
+  },
+  {
+    id: 'hv6_03_rootkeeper_vigil',
+    chapterId: 'heart_of_veil',
+    triggerType: 'zone_x',
+    minX: 3120,
+    maxX: 3560,
+    text: 'Bram the Rootkeeper followed the sap-rivers all the way to the core! Press F to hear his final blessing.',
+    priority: 2,
+    durationSec: 5.4,
+    oncePerSave: true,
+  },
+  {
+    id: 'hv6_06_convergence',
+    chapterId: 'heart_of_veil',
+    triggerType: 'zone_x',
+    minX: 6320,
+    maxX: 6760,
+    text: 'Currents, updrafts, and resonance bells all flow together here. Trust your stride and let your seed light the way!',
+    priority: 2,
+    durationSec: 5.6,
+    oncePerSave: true,
+  },
+  {
+    id: 'hv6_09_guardian_climax',
+    chapterId: 'heart_of_veil',
+    triggerType: 'zone_x',
+    minX: 10380,
+    maxX: 10860,
+    text: 'The Heart Guardians are testing our resolve! Ring the Resonance Bell and calm the Sentinel with Wake to reach the Cradle!',
+    priority: 3,
+    durationSec: 6.0,
+    oncePerSave: true,
+  },
+  {
+    id: 'hv6_10_first_seed_cradle',
+    chapterId: 'heart_of_veil',
+    triggerType: 'zone_x',
+    minX: 12280,
+    maxX: 12950,
+    text: 'The First Seed Cradle! Release Wake with all our heart, Nima—let’s end the Stillness and bring eternal dawn to the Veilgrove!',
+    priority: 3,
+    durationSec: 6.4,
+    oncePerSave: true,
+  },
+
+  // =========================================================================
+  // OPTIONAL MEMORY ECHOES (12 Secret Lore Shrines across Chapters 01–06)
   // =========================================================================
   {
     id: 'memory_canopy_01',
@@ -448,6 +583,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.2,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_canopy_bough_song',
   },
   {
     id: 'memory_canopy_02',
@@ -457,6 +593,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.4,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_canopy_hollow_whisper',
   },
   {
     id: 'memory_marsh_01',
@@ -466,6 +603,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.2,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_marsh_reed_chime',
   },
   {
     id: 'memory_marsh_02',
@@ -475,6 +613,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.2,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_marsh_sunken_bell',
   },
   {
     id: 'memory_hollow_01',
@@ -484,6 +623,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.4,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_hollow_root_pact',
   },
   {
     id: 'memory_hollow_02',
@@ -493,6 +633,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.5,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_hollow_first_seed',
   },
   {
     id: 'memory_ruins_01',
@@ -502,6 +643,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.4,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_ruins_sky_watch',
   },
   {
     id: 'memory_ruins_02',
@@ -511,6 +653,47 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     priority: 3,
     durationSec: 6.5,
     oncePerSave: false,
+    journalEntryId: 'journal_mem_ruins_final_vow',
+  },
+  {
+    id: 'memory_choir_01',
+    chapterId: 'any',
+    triggerType: 'memory_echo',
+    text: 'Memory Echo · "We cast no clappers of iron; our bells ring only when touched by the living warmth of a waking seed."',
+    priority: 3,
+    durationSec: 6.4,
+    oncePerSave: false,
+    journalEntryId: 'journal_mem_choir_first_note',
+  },
+  {
+    id: 'memory_choir_02',
+    chapterId: 'any',
+    triggerType: 'memory_echo',
+    text: 'Memory Echo · "When the last note faded into silver moss, the sanctuary gates sealed so no cold wind could reach the Heart of the Veil."',
+    priority: 3,
+    durationSec: 6.4,
+    oncePerSave: false,
+    journalEntryId: 'journal_mem_choir_silent_hymn',
+  },
+  {
+    id: 'memory_heart_01',
+    chapterId: 'any',
+    triggerType: 'memory_echo',
+    text: 'Memory Echo · "Before the tree closed its eyes, it placed its brightest warmth inside a single golden seed and entrusted it to the upper boughs."',
+    priority: 3,
+    durationSec: 6.5,
+    oncePerSave: false,
+    journalEntryId: 'journal_mem_heart_sap_cradle',
+  },
+  {
+    id: 'memory_heart_02',
+    chapterId: 'any',
+    triggerType: 'memory_echo',
+    text: 'Memory Echo · "Sleep was our shelter, not our ending. Through Nima’s courage and Pip’s light, the Veilgrove breathes in eternal dawn."',
+    priority: 3,
+    durationSec: 6.6,
+    oncePerSave: false,
+    journalEntryId: 'journal_mem_heart_eternal_dawn',
   },
 
   // =========================================================================
@@ -521,7 +704,7 @@ export const CAMPAIGN_DIALOGUE_ENTRIES: DialogueEntry[] = [
     chapterId: 'any',
     triggerType: 'event',
     eventKey: 'puzzle_struggle',
-    text: 'See that sleeping plant nearby? Press E or X when we are close to send it a Wake pulse.',
+    text: 'See that sleeping plant or bell nearby? Press E or X when we are close to send it a Wake pulse.',
     priority: 1,
     durationSec: 4.4,
     oncePerSave: false,

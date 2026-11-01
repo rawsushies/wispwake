@@ -6,26 +6,30 @@ export interface UnifiedInputState {
   jumpHeld: boolean;
   jumpJustReleased: boolean;
   wakeJustPressed: boolean;
+  interactJustPressed: boolean;
 }
 
 /**
- * InputManager — Milestone 5 Unified Input Architecture.
+ * InputManager — Milestone 6 Unified Input Architecture.
  *
  * Combines Desktop Keyboard (both Phaser KeyboardPlugin AND direct window keydown/keyup
  * listeners so closing a React modal never drops keyboard focus), Mobile/Tablet Multi-Touch
- * Controls, and HTML5 Gamepad into a single deterministic frame state.
+ * Controls (Portrait & Landscape), and HTML5 Gamepad into a single deterministic frame state.
+ * Includes dedicated NPC Interaction input (`F` on keyboard, contextual Touch button, or Gamepad).
  */
 class UnifiedInputService {
   private touchLeft = false;
   private touchRight = false;
   private touchJump = false;
   private touchWake = false;
+  private touchInteract = false;
 
   private winKeys = new Set<string>();
   private listenersAttached = false;
 
   private prevCombinedJump = false;
   private prevCombinedWake = false;
+  private prevCombinedInteract = false;
 
   constructor() {
     this.ensureWindowListeners();
@@ -50,7 +54,10 @@ class UnifiedInputService {
     });
   }
 
-  public setTouchButton(button: 'left' | 'right' | 'jump' | 'wake', active: boolean): void {
+  public setTouchButton(
+    button: 'left' | 'right' | 'jump' | 'wake' | 'interact',
+    active: boolean
+  ): void {
     switch (button) {
       case 'left':
         this.touchLeft = active;
@@ -64,6 +71,9 @@ class UnifiedInputService {
       case 'wake':
         this.touchWake = active;
         break;
+      case 'interact':
+        this.touchInteract = active;
+        break;
     }
   }
 
@@ -72,9 +82,11 @@ class UnifiedInputService {
     this.touchRight = false;
     this.touchJump = false;
     this.touchWake = false;
+    this.touchInteract = false;
     this.winKeys.clear();
     this.prevCombinedJump = false;
     this.prevCombinedWake = false;
+    this.prevCombinedInteract = false;
   }
 
   public getTouchState() {
@@ -83,6 +95,7 @@ class UnifiedInputService {
       right: this.touchRight,
       jump: this.touchJump,
       wake: this.touchWake,
+      interact: this.touchInteract,
     };
   }
 
@@ -95,11 +108,11 @@ class UnifiedInputService {
       keySpace?: Phaser.Input.Keyboard.Key;
       keyE?: Phaser.Input.Keyboard.Key;
       keyX?: Phaser.Input.Keyboard.Key;
+      keyF?: Phaser.Input.Keyboard.Key;
     }
   ): UnifiedInputState {
     this.ensureWindowListeners();
 
-    // 1. Keyboard State (Phaser + direct window key state)
     const kbLeft = Boolean(
       cursors?.left?.isDown ||
         keys?.keyA?.isDown ||
@@ -127,12 +140,13 @@ class UnifiedInputService {
         this.winKeys.has('KeyE') ||
         this.winKeys.has('KeyX')
     );
+    const kbInteract = Boolean(keys?.keyF?.isDown || this.winKeys.has('KeyF'));
 
-    // 2. Optional Gamepad State
     let gpLeft = false;
     let gpRight = false;
     let gpJump = false;
     let gpWake = false;
+    let gpInteract = false;
 
     if (typeof navigator !== 'undefined' && navigator.getGamepads) {
       const pads = navigator.getGamepads();
@@ -142,23 +156,26 @@ class UnifiedInputService {
         gpLeft = axisX < -0.35 || Boolean(pad.buttons[14]?.pressed);
         gpRight = axisX > 0.35 || Boolean(pad.buttons[15]?.pressed);
         gpJump = Boolean(pad.buttons[0]?.pressed || pad.buttons[1]?.pressed);
-        gpWake = Boolean(pad.buttons[2]?.pressed || pad.buttons[3]?.pressed || pad.buttons[5]?.pressed);
+        gpWake = Boolean(pad.buttons[2]?.pressed || pad.buttons[5]?.pressed);
+        gpInteract = Boolean(pad.buttons[3]?.pressed || pad.buttons[4]?.pressed);
       }
     }
 
-    // 3. Combine Keyboard + Touch + Gamepad
     const leftDown = kbLeft || this.touchLeft || gpLeft;
     const rightDown = kbRight || this.touchRight || gpRight;
     const jumpDown = kbJump || this.touchJump || gpJump;
     const wakeDown = kbWake || this.touchWake || gpWake;
+    const interactDown = kbInteract || this.touchInteract || gpInteract;
 
     const moveX = (rightDown ? 1 : 0) - (leftDown ? 1 : 0);
     const jumpJustPressed = jumpDown && !this.prevCombinedJump;
     const jumpJustReleased = !jumpDown && this.prevCombinedJump;
     const wakeJustPressed = wakeDown && !this.prevCombinedWake;
+    const interactJustPressed = interactDown && !this.prevCombinedInteract;
 
     this.prevCombinedJump = jumpDown;
     this.prevCombinedWake = wakeDown;
+    this.prevCombinedInteract = interactDown;
 
     return {
       moveX,
@@ -166,6 +183,7 @@ class UnifiedInputService {
       jumpHeld: jumpDown,
       jumpJustReleased,
       wakeJustPressed,
+      interactJustPressed,
     };
   }
 }
